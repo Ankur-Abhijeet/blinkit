@@ -1349,3 +1349,324 @@ body {
     gap: 6px;
   }
 }
+
+/* ==========================================
+   RESPONSIVE DESIGN OVERHAUL (MOBILE & DESKTOP)
+   ========================================== */
+
+/* Mobile Phones (screen width <= 480px) */
+@media (max-width: 480px) {
+  body {
+    padding-bottom: 70px;
+  }
+
+  .blinkit-header {
+    padding: 8px 12px;
+  }
+
+  .header-sub-tag {
+    font-size: 9px;
+  }
+
+  .delivery-title {
+    font-size: 16px;
+  }
+
+  .address-dropdown-bar {
+    font-size: 11px;
+  }
+
+  .header-search-bar {
+    margin-top: 6px;
+  }
+
+  .header-search-bar input {
+    font-size: 13px;
+    height: 38px;
+    padding: 0 32px 0 34px;
+  }
+
+  /* Product Grid: 2 Equal Columns on Phone */
+  .products-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+    padding: 0 4px;
+  }
+
+  .blinkit-card {
+    padding: 8px;
+    border-radius: 12px;
+  }
+
+  .card-img {
+    height: 90px;
+    font-size: 42px;
+  }
+
+  .card-title {
+    font-size: 11px;
+    height: 28px;
+    line-height: 1.25;
+  }
+
+  .card-pack {
+    font-size: 10px;
+    margin: 2px 0 6px 0;
+  }
+
+  .price-main {
+    font-size: 13px;
+  }
+
+  .price-mrp {
+    font-size: 10px;
+  }
+
+  .add-btn-blinkit {
+    padding: 6px 14px;
+    font-size: 11px;
+    height: 32px;
+  }
+
+  .stepper {
+    height: 32px;
+  }
+
+  .stepper button {
+    width: 28px;
+    font-size: 14px;
+  }
+
+  /* Category Grid: 4 Equal Columns */
+  .cat-grid-4col {
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 6px !important;
+  }
+
+  .cat-tile span {
+    font-size: 10px;
+    line-height: 1.2;
+  }
+
+  .tile-icon-bg {
+    height: 48px;
+    font-size: 20px;
+    border-radius: 10px;
+  }
+
+  /* Product Detail Page (PDP) Mobile Optimization */
+  .pdp-header {
+    padding: 8px 12px;
+  }
+
+  .pdp-container {
+    padding: 10px 12px 100px 12px;
+    gap: 12px;
+  }
+
+  .pdp-hero-card {
+    padding: 12px;
+    border-radius: 14px;
+  }
+
+  .pdp-hero-img-box {
+    height: 150px;
+    font-size: 64px;
+    margin-bottom: 12px;
+  }
+
+  .pdp-product-title {
+    font-size: 16px;
+    margin-bottom: 10px;
+  }
+
+  .pdp-pack-options-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 6px !important;
+  }
+
+  .pdp-pack-option-btn {
+    padding: 8px 4px;
+  }
+
+  .pdp-pack-weight {
+    font-size: 11px;
+  }
+
+  .pdp-pack-price {
+    font-size: 11px;
+  }
+
+  .pdp-pack-save {
+    font-size: 8px;
+  }
+
+  .pdp-section-box {
+    padding: 12px;
+    border-radius: 14px;
+  }
+
+  .pdp-section-title {
+    font-size: 14px;
+    margin-bottom: 10px;
+  }
+
+  .pdp-mini-card {
+    flex: 0 0 120px !important;
+    padding: 6px;
+  }
+
+  .pdp-mini-img {
+    height: 52px;
+    font-size: 24px;
+  }
+
+  .pdp-mini-title {
+    font-size: 10px;
+    height: 26px;
+  }
+
+  .pdp-sticky-bottom-bar {
+    padding: 8px 12px max(8px, env(safe-area-inset-bottom)) 12px;
+  }
+
+  .pdp-bottom-price-row strong {
+    font-size: 16px;
+  }
+
+  .pdp-add-btn {
+    padding: 10px 18px;
+    font-size: 12px;
+  }
+
+  /* Cart Sidebar Drawer Full Width */
+  .cart-sidebar {
+    width: 100% !important;
+    max-width: 100vw !important;
+  }
+
+  /* AI Recommendation Sheet Mobile */
+  .blinkit-bottom-sheet {
+    width: 100% !important;
+    max-width: 100vw !important;
+    border-radius: 20px 20px 0 0 !important;
+    padding: 16px 14px 20px 14px !important;
+  }
+
+  .rec-card-item {
+    padding: 10px;
+    gap: 8px;
+  }
+
+  .rec-title {
+    font-size: 12px;
+  }
+
+  .rec-reason {
+    font-size: 10px;
+    padding: 3px 6px;
+  }
+}
+
+/* Tablets (481px to 768px) */
+@media (min-width: 481px) and (max-width: 768px) {
+  .products-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 12px !important;
+  }
+
+  .cat-grid-4col {
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 10px !important;
+  }
+
+  .pdp-hero-img-box {
+    height: 180px;
+    font-size: 72px;
+  }
+
+  .cart-sidebar {
+    width: 380px;
+  }
+}
+
+/* Desktop Screens (769px and above) */
+@media (min-width: 769px) {
+  .blinkit-header {
+    max-width: 1200px;
+    margin: 0 auto;
+    border-radius: 0 0 16px 16px;
+  }
+
+  .quick-pill-strip {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  #homeView, #categoryView, #searchView {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .hero-promo-banner {
+    border-radius: 16px;
+    margin-top: 12px;
+  }
+
+  .cat-grid-4col {
+    grid-template-columns: repeat(8, 1fr) !important;
+    gap: 12px !important;
+  }
+
+  .products-grid {
+    grid-template-columns: repeat(5, 1fr) !important;
+    gap: 16px !important;
+  }
+
+  .blinkit-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .blinkit-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  }
+
+  /* Desktop PDP Layout */
+  .pdp-container {
+    max-width: 768px;
+    margin: 20px auto;
+  }
+
+  .pdp-hero-img-box {
+    height: 220px;
+    font-size: 84px;
+  }
+
+  .pdp-product-title {
+    font-size: 22px;
+  }
+
+  .pdp-mini-card {
+    flex: 0 0 150px !important;
+  }
+
+  .pdp-mini-card:hover {
+    border-color: var(--blinkit-green);
+  }
+
+  .pdp-sticky-bottom-bar {
+    max-width: 768px;
+    margin: 0 auto;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.12);
+  }
+
+  /* Desktop AI Modal Dialog */
+  .blinkit-bottom-sheet {
+    max-width: 480px !important;
+    margin: auto !important;
+    border-radius: 20px !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2) !important;
+  }
+}
