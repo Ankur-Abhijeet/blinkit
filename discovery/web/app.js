@@ -653,11 +653,10 @@ proceedCheckoutBtn.addEventListener("click", async () => {
 
     return `
       <div class="rec-card-item">
-        <div class="rec-cat-badge">UNDISCOVERED CAT ${cand.l1_id}</div>
         <div class="rec-img-box">${emoji}</div>
         <div style="flex:1;">
           <div class="rec-title">${cand.name}</div>
-          <div class="rec-reason">😏 ${r.headline || "Because adulting is hard & hunger waits for no one"}</div>
+          <div class="rec-reason">😏 ${r.headline || "Buying healthy food for your conscience and chips for your soul? We admire the duality of man. 🥔"}</div>
         </div>
         <div class="rec-price-row">
           <div>

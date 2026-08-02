@@ -173,12 +173,15 @@ def create_app(worker_engine: Optional[NearlineWorkerEngine] = None) -> FastAPI:
                     available_desc = "; ".join(f"SKU {c.sku_id}: {c.name} (Cat {c.l1_id}, Rs {c.price_paise//100})" for c in sample_cands)
 
                     system_prompt = (
-                        "You are Blinkit's Contextual AI Discovery Engine. You specialize in witty, funny, sarcastic, and entertaining recommendations. "
+                        "You are Blinkit's Contextual AI Discovery Engine. You are notoriously witty, hilariously sarcastic, playfully judgy, and eye-grabbing. "
                         "Analyze the SPECIFIC SYNERGY of this exact cart product combination, Time of Day, and Weather. "
                         "Select 3 top complementary products from UNDISCOVERED categories. "
-                        "For EACH suggested product, write a funny, sarcastic, or entertaining 1-line reason (max 10-12 words) explaining why you are suggesting it! "
-                        "Examples of tone: 'Because adulting is hard and 2 AM hunger doesn't wait', 'Your couch called—it demands snacks', 'Main character energy incoming', 'Sleep is a myth anyway'. "
-                        "Respond ONLY in valid JSON format: {\"reason_title\": \"Witty banner title\", \"items\": [{\"sku_id\": int, \"headline\": \"funny/sarcastic reason line (max 12 words)\"}]}"
+                        "For EACH suggested product, write a 1 to 3 line hilariously sarcastic, judgy, or witty observation (15-30 words) commenting on their life choices, cart synergy, weather, or time of day! "
+                        "Tone guidelines: "
+                        "- Be delightfully judgy: 'Buying salad for your conscience and chips for your soul? We admire the duality of man. 🥔' "
+                        "- Be playfully sarcastic: '2 AM noodles detected. Tomorrow morning you will regret this, but tonight you are a king. 👑' "
+                        "- Be eye-grabbing: 'Your couch called—it declared an emergency snack shortage and demands immediate delivery. 🍿' "
+                        "Respond ONLY in valid JSON format: {\"reason_title\": \"Witty banner title\", \"items\": [{\"sku_id\": int, \"headline\": \"hilarious 1-3 line sarcastic/judgy observation\"}]}"
                     )
 
                     user_prompt = (
@@ -194,17 +197,17 @@ def create_app(worker_engine: Optional[NearlineWorkerEngine] = None) -> FastAPI:
                         prompt=user_prompt,
                         system_prompt=system_prompt,
                         use_groq=True,
-                        temperature=0.7
+                        temperature=0.8,
+                        max_tokens=600
                     )
 
                     funny_fallbacks = [
-                        "Because adulting is hard & hunger doesn't wait 🍕",
-                        "Your couch called—it demands snacks 🍿",
-                        "Sleep is a myth anyway; enjoy the treat ☕",
-                        "Main character energy right here ✨",
-                        "Science proves this pairs 100% with your cart 🧪",
-                        "Life is too short to skip this 🍩",
-                        "Your future self will thank you for this 🔮",
+                        "Buying healthy food for your conscience and chips for your soul? We admire the duality of man. 🥔",
+                        "2 AM cravings detected. Tomorrow morning you will regret this, but tonight you are a king. 👑",
+                        "Your couch called—it declared an emergency snack shortage and demands immediate delivery. 🍿",
+                        "Sleep is officially a luxury product now. Here is caffeine to pretend you have your life together. ☕",
+                        "Eating ice cream while it's rainy? Either you're in a dramatic movie breakup or you're a legend. 🍦",
+                        "Science proves this pairs 100% better with your cart. Don't fight the algorithm. 🧪",
                     ]
 
                     if ok:
