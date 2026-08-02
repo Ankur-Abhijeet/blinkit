@@ -602,24 +602,54 @@ async function triggerNearlineSimulation() {
 }
 
 // 7. Place Order Click (Pops Up AI Recommendation Sheet)
-proceedCheckoutBtn.addEventListener("click", () => {
-  const recs = (state.lastDecision && state.lastDecision.multi_recommendations) || [];
-
-  slotABannerTitle.textContent = (state.lastDecision && state.lastDecision.reason_line) || "AI Recommendations for your Order";
+proceedCheckoutBtn.addEventListener("click", async () => {
+  // 1. Show modal immediately with animated loading spinner
+  slotABannerTitle.textContent = "AI Recommendations for your Order";
   contextPillTag.textContent = `🌦️ ${getSystemWeather()} | ⏰ ${getSystemTimeOfDay()}`;
+  multiRecsGrid.innerHTML = `
+    <div style="grid-column: 1 / -1; text-align: center; padding: 30px 10px; color: #16a34a;">
+      <div style="font-size: 36px; margin-bottom: 8px; animation: pulse 1s infinite alternate;">✨</div>
+      <h4 style="font-size: 14px; font-weight: 800; color: #0f172a;">AI Engine Analyzing Basket Synergy...</h4>
+      <p style="font-size: 11px; color: #64748b; margin-top: 4px;">Groq LLM is crafting personalized recommendations based on time, weather & basket context</p>
+    </div>
+  `;
+
+  if (cartSidebar) {
+    cartSidebar.classList.remove("open");
+    cartSidebar.classList.remove("mobile-open");
+  }
+  slotAModalOverlay.classList.remove("hidden");
+
+  // 2. Await fresh AI nearline simulation
+  await triggerNearlineSimulation();
+
+  // 3. Render fresh Groq AI recommendations
+  const recs = (state.lastDecision && state.lastDecision.multi_recommendations) || [];
+  slotABannerTitle.textContent = (state.lastDecision && state.lastDecision.reason_line) || "AI Recommendations for your Order";
+
+  if (recs.length === 0) {
+    multiRecsGrid.innerHTML = `
+      <div style="grid-column: 1 / -1; text-align: center; padding: 20px; color: #64748b;">
+        <h4>Items in your basket are ready for checkout!</h4>
+      </div>
+    `;
+    return;
+  }
 
   multiRecsGrid.innerHTML = recs.map(r => {
     const cand = r.candidate;
     const priceRupees = (cand.price_paise / 100).toFixed(0);
     const mrpRupees = (cand.mrp_paise / 100).toFixed(0);
 
-    let emoji = "🛍️";
-    if (cand.l1_id === 20) emoji = "👶";
-    else if (cand.l1_id === 25) emoji = "🐶";
-    else if (cand.l1_id === 18) emoji = "🍫";
-    else if (cand.l1_id === 88) emoji = "💊";
-    else if (cand.l1_id === 35) emoji = "🧴";
-    else if (cand.l1_id === 42) emoji = "🥤";
+    let emoji = cand.emoji || "🛍️";
+    if (!cand.emoji) {
+      if (cand.l1_id === 20) emoji = "👶";
+      else if (cand.l1_id === 25) emoji = "🐶";
+      else if (cand.l1_id === 18) emoji = "🍫";
+      else if (cand.l1_id === 88) emoji = "💊";
+      else if (cand.l1_id === 35) emoji = "🧴";
+      else if (cand.l1_id === 42) emoji = "🥤";
+    }
 
     return `
       <div class="rec-card-item">
@@ -639,12 +669,6 @@ proceedCheckoutBtn.addEventListener("click", () => {
       </div>
     `;
   }).join("");
-
-  if (cartSidebar) {
-    cartSidebar.classList.remove("open");
-    cartSidebar.classList.remove("mobile-open");
-  }
-  slotAModalOverlay.classList.remove("hidden");
 });
 
 function addRecommendedSku(skuId) {
