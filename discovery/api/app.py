@@ -272,6 +272,14 @@ def create_app(worker_engine: Optional[NearlineWorkerEngine] = None) -> FastAPI:
         def serve_index():
             return FileResponse(os.path.join(web_dir, "index.html"))
 
+        @app.get("/styles.css")
+        def serve_styles():
+            return FileResponse(os.path.join(web_dir, "styles.css"))
+
+        @app.get("/app.js")
+        def serve_js():
+            return FileResponse(os.path.join(web_dir, "app.js"))
+
     return app
 
 
