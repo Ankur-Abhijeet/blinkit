@@ -35,14 +35,20 @@ try {
   localStorage.removeItem("BLINKIT_USER_LOCATION");
 } catch (e) {}
 
-let liveUserLocation = "Green Park, New Delhi";
-let liveWeatherCondition = null;
+let liveUserLocation = "NextLeap Office, Koramangala, Bangalore";
+let liveWeatherCondition = "Pleasant & Breezy, 24°C";
+
+function updateHeaderAddressDisplay(locText) {
+  liveUserLocation = locText;
+  const addressText = document.getElementById("headerAddressText");
+  if (addressText) addressText.textContent = locText;
+}
 
 async function detectUserLocationAndWeather() {
   const addressText = document.getElementById("headerAddressText");
 
   if (!("geolocation" in navigator)) {
-    if (addressText) addressText.textContent = liveUserLocation;
+    updateHeaderAddressDisplay(liveUserLocation);
     return;
   }
 
@@ -60,8 +66,7 @@ async function detectUserLocationAndWeather() {
           const geoData = await geoRes.json();
           const locality = geoData.locality || geoData.city || "Current Location";
           const city = geoData.principalSubdivision || geoData.countryName || "";
-          liveUserLocation = `${locality}${city ? ", " + city : ""}`;
-          if (addressText) addressText.textContent = liveUserLocation;
+          updateHeaderAddressDisplay(`${locality}${city ? ", " + city : ""}`);
         }
 
         // Fetch Current Weather via Open-Meteo API
@@ -83,12 +88,12 @@ async function detectUserLocationAndWeather() {
         }
       } catch (err) {
         console.warn("GPS/Weather API Error:", err);
-        if (addressText) addressText.textContent = liveUserLocation;
+        updateHeaderAddressDisplay(liveUserLocation);
       }
     },
     (err) => {
       console.warn("Geolocation permission denied/unavailable:", err);
-      if (addressText) addressText.textContent = liveUserLocation;
+      updateHeaderAddressDisplay(liveUserLocation);
     },
     { timeout: 10000, enableHighAccuracy: true }
   );
@@ -844,14 +849,64 @@ if (pdpSearchBtn) {
   });
 }
 
+// Location Modal Controls
+const locationModalOverlay = document.getElementById("locationModalOverlay");
+const closeLocationModalBtn = document.getElementById("closeLocationModalBtn");
+const btnDetectGps = document.getElementById("btnDetectGps");
+const locationSearchInput = document.getElementById("locationSearchInput");
+const quickLocChips = document.getElementById("quickLocChips");
 const headerAddressBtn = document.getElementById("headerAddressBtn");
+
+function openLocationModal() {
+  if (locationModalOverlay) locationModalOverlay.classList.remove("hidden");
+}
+
+function closeLocationModal() {
+  if (locationModalOverlay) locationModalOverlay.classList.add("hidden");
+}
+
 if (headerAddressBtn) {
   headerAddressBtn.addEventListener("click", () => {
-    detectUserLocationAndWeather();
+    openLocationModal();
+  });
+}
+
+if (closeLocationModalBtn) {
+  closeLocationModalBtn.addEventListener("click", () => {
+    closeLocationModal();
+  });
+}
+
+if (btnDetectGps) {
+  btnDetectGps.addEventListener("click", async () => {
+    closeLocationModal();
+    await detectUserLocationAndWeather();
+  });
+}
+
+if (locationSearchInput) {
+  locationSearchInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && locationSearchInput.value.trim()) {
+      updateHeaderAddressDisplay(locationSearchInput.value.trim());
+      closeLocationModal();
+    }
+  });
+}
+
+if (quickLocChips) {
+  quickLocChips.addEventListener("click", (e) => {
+    const btn = e.target.closest("button.loc-chip-btn");
+    if (btn && btn.dataset.loc) {
+      document.querySelectorAll("#quickLocChips .loc-chip-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      updateHeaderAddressDisplay(btn.dataset.loc);
+      closeLocationModal();
+    }
   });
 }
 
 // Initial Setup
-detectUserLocationAndWeather();
+updateHeaderAddressDisplay("NextLeap Office, Koramangala, Bangalore");
+openLocationModal();
 loadFullCatalog();
 renderCartSidebar();

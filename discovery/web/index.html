@@ -26,8 +26,8 @@
       </div>
     </div>
 
-    <div class="address-dropdown-bar" id="headerAddressBtn">
-      ⚡ <strong>DELIVERY LOCATION</strong> - <span id="headerAddressText">Detecting location...</span> <span class="down-arrow">▼</span>
+    <div class="address-dropdown-bar" id="headerAddressBtn" style="cursor: pointer;">
+      ⚡ <strong>DELIVERY IN 8 MINS</strong> - <span id="headerAddressText">NextLeap Office, Koramangala, Bangalore</span> <span class="down-arrow">▼</span>
     </div>
 
     <!-- Global Search Input Bar -->
@@ -390,6 +390,41 @@
 
       <div class="sheet-footer">
         <button class="btn-skip-checkout" id="modalSkipBtn">Skip & Place Order ▶</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Location Picker Modal Overlay -->
+  <div class="blinkit-modal-overlay" id="locationModalOverlay">
+    <div class="location-modal-card">
+      <div class="location-modal-header">
+        <h3>Change Location</h3>
+        <button class="modal-close-btn" id="closeLocationModalBtn">✕</button>
+      </div>
+      
+      <div class="location-modal-body">
+        <div class="location-action-row">
+          <button class="btn-detect-gps" id="btnDetectGps">
+            <span style="font-size:16px;">🎯</span> Detect my location
+          </button>
+          <span class="location-or-divider">OR</span>
+          <div class="location-search-box">
+            <span style="font-size:14px; margin-right:6px;">🔍</span>
+            <input type="text" id="locationSearchInput" placeholder="search delivery location or pincode (e.g. 560034)...">
+          </div>
+        </div>
+
+        <div class="quick-locations-section">
+          <div class="quick-loc-title">Popular Delivery Hubs</div>
+          <div class="quick-loc-chips" id="quickLocChips">
+            <button class="loc-chip-btn active" data-loc="NextLeap Office, Koramangala, Bangalore">📍 NextLeap Office, Bangalore (560034)</button>
+            <button class="loc-chip-btn" data-loc="HSR Layout, Bangalore">📍 HSR Layout, Bangalore (560102)</button>
+            <button class="loc-chip-btn" data-loc="Indiranagar, Bangalore">📍 Indiranagar, Bangalore (560038)</button>
+            <button class="loc-chip-btn" data-loc="Whitefield, Bangalore">📍 Whitefield, Bangalore (560066)</button>
+            <button class="loc-chip-btn" data-loc="Connaught Place, New Delhi">📍 Connaught Place, New Delhi (110001)</button>
+            <button class="loc-chip-btn" data-loc="Powai, Mumbai">📍 Powai, Mumbai (400076)</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
