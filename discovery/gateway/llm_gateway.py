@@ -58,30 +58,46 @@ class LLMGatewayClient:
     def _call_groq(
         self, prompt: str, system_prompt: str, model_id: str, temperature: float, max_tokens: int
     ) -> Tuple[bool, str]:
+        if not self.groq_api_key:
+            print("[GROQ GATEWAY WARNING] GROQ_API_KEY environment variable is not set!")
+            return False, "GROQ_API_KEY environment variable is missing"
+
         headers = {
             "Authorization": f"Bearer {self.groq_api_key}",
             "Content-Type": "application/json",
         }
-        payload = {
-            "model": model_id if "llama-3.3" in model_id else "llama-3.3-70b-versatile",
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": prompt},
-            ],
-            "temperature": temperature,
-            "max_tokens": max_tokens,
-            "response_format": {"type": "json_object"},
-        }
-        try:
-            with httpx.Client(timeout=30.0) as client:
-                res = client.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload)
-                if res.status_code == 200:
-                    data = res.json()
-                    content = data["choices"][0]["message"]["content"]
-                    return True, content
-                return False, f"Groq HTTP Error {res.status_code}: {res.text}"
-        except Exception as e:
-            return False, f"Groq client exception: {str(e)}"
+        
+        models_to_try = [
+            model_id if "llama-3.3" in model_id or "llama-3.1" in model_id else "llama-3.3-70b-versatile",
+            "llama-3.1-8b-instant",
+        ]
+
+        last_error = ""
+        for m in models_to_try:
+            payload = {
+                "model": m,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": prompt},
+                ],
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+                "response_format": {"type": "json_object"},
+            }
+            try:
+                with httpx.Client(timeout=15.0) as client:
+                    res = client.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload)
+                    if res.status_code == 200:
+                        data = res.json()
+                        content = data["choices"][0]["message"]["content"]
+                        return True, content
+                    last_error = f"Groq HTTP Error {res.status_code} ({m}): {res.text}"
+                    print(f"[GROQ GATEWAY ERROR] {last_error}")
+            except Exception as e:
+                last_error = f"Groq client exception ({m}): {str(e)}"
+                print(f"[GROQ GATEWAY EXCEPTION] {last_error}")
+
+        return False, last_error
 
     def _call_ollama(
         self, prompt: str, system_prompt: str, model_id: str, temperature: float, max_tokens: int
