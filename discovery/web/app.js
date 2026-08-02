@@ -29,7 +29,13 @@ const CATEGORY_NAMES = {
 };
 
 // Self-Collected Time & Weather Context
-let liveUserLocation = "42 Park Avenue, Green Park";
+try {
+  // Wipe any legacy address strings cached in browser storage
+  localStorage.removeItem("USER_ADDRESS");
+  localStorage.removeItem("BLINKIT_USER_LOCATION");
+} catch (e) {}
+
+let liveUserLocation = "Green Park, New Delhi";
 let liveWeatherCondition = null;
 
 async function detectUserLocationAndWeather() {
@@ -39,6 +45,8 @@ async function detectUserLocationAndWeather() {
     if (addressText) addressText.textContent = liveUserLocation;
     return;
   }
+
+  if (addressText) addressText.textContent = "📍 Requesting GPS Location...";
 
   navigator.geolocation.getCurrentPosition(
     async (position) => {
@@ -82,7 +90,7 @@ async function detectUserLocationAndWeather() {
       console.warn("Geolocation permission denied/unavailable:", err);
       if (addressText) addressText.textContent = liveUserLocation;
     },
-    { timeout: 8000 }
+    { timeout: 10000, enableHighAccuracy: true }
   );
 }
 
