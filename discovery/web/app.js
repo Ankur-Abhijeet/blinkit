@@ -29,6 +29,63 @@ const CATEGORY_NAMES = {
 };
 
 // Self-Collected Time & Weather Context
+let liveUserLocation = "42 Park Avenue, Green Park";
+let liveWeatherCondition = null;
+
+async function detectUserLocationAndWeather() {
+  const addressText = document.getElementById("headerAddressText");
+
+  if (!("geolocation" in navigator)) {
+    if (addressText) addressText.textContent = liveUserLocation;
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    async (position) => {
+      const lat = position.coords.latitude;
+      const lon = position.coords.longitude;
+
+      try {
+        // Reverse Geocoding to get City & Locality
+        const geoRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`);
+        if (geoRes.ok) {
+          const geoData = await geoRes.json();
+          const locality = geoData.locality || geoData.city || "Current Location";
+          const city = geoData.principalSubdivision || geoData.countryName || "";
+          liveUserLocation = `${locality}${city ? ", " + city : ""}`;
+          if (addressText) addressText.textContent = liveUserLocation;
+        }
+
+        // Fetch Current Weather via Open-Meteo API
+        const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
+        if (weatherRes.ok) {
+          const weatherData = await weatherRes.json();
+          const cw = weatherData.current_weather;
+          if (cw) {
+            const temp = Math.round(cw.temperature);
+            const code = cw.weathercode;
+            let condition = "Sunny";
+            if (code >= 1 && code <= 3) condition = "Partly Cloudy";
+            else if (code >= 45 && code <= 48) condition = "Foggy";
+            else if (code >= 51 && code <= 67) condition = "Rainy";
+            else if (code >= 71) condition = "Cold";
+            
+            liveWeatherCondition = `${condition}, ${temp}°C`;
+          }
+        }
+      } catch (err) {
+        console.warn("GPS/Weather API Error:", err);
+        if (addressText) addressText.textContent = liveUserLocation;
+      }
+    },
+    (err) => {
+      console.warn("Geolocation permission denied/unavailable:", err);
+      if (addressText) addressText.textContent = liveUserLocation;
+    },
+    { timeout: 8000 }
+  );
+}
+
 function getSystemTimeOfDay() {
   const d = new Date();
   const hour = d.getHours();
@@ -41,6 +98,7 @@ function getSystemTimeOfDay() {
 }
 
 function getSystemWeather() {
+  if (liveWeatherCondition) return liveWeatherCondition;
   const month = new Date().getMonth();
   if (month >= 5 && month <= 8) return "Monsoon Rain & Humid, 27°C";
   if (month >= 9 || month <= 1) return "Cold Winter & Fog, 14°C";
@@ -604,8 +662,8 @@ async function triggerNearlineSimulation() {
 // 7. Place Order Click (Pops Up AI Recommendation Sheet)
 proceedCheckoutBtn.addEventListener("click", async () => {
   // 1. Show modal immediately with animated loading spinner
-  slotABannerTitle.textContent = "AI Recommendations for your Order";
-  contextPillTag.textContent = `🌦️ ${getSystemWeather()} | ⏰ ${getSystemTimeOfDay()}`;
+  slotABannerTitle.textContent = "AI Smart Recommendations";
+  contextPillTag.textContent = `✨ Personalized For Your Order`;
   multiRecsGrid.innerHTML = `
     <div style="grid-column: 1 / -1; text-align: center; padding: 30px 10px; color: #16a34a;">
       <div style="font-size: 36px; margin-bottom: 8px; animation: pulse 1s infinite alternate;">✨</div>
@@ -778,6 +836,14 @@ if (pdpSearchBtn) {
   });
 }
 
+const headerAddressBtn = document.getElementById("headerAddressBtn");
+if (headerAddressBtn) {
+  headerAddressBtn.addEventListener("click", () => {
+    detectUserLocationAndWeather();
+  });
+}
+
 // Initial Setup
+detectUserLocationAndWeather();
 loadFullCatalog();
 renderCartSidebar();
