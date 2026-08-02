@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Blinkit — India's Last Minute App | 10 Minute Delivery</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+
+  <!-- 1. Authentic Blinkit Header Bar -->
+  <header class="blinkit-header">
+    <div class="header-top-row">
+      <div class="header-brand-col">
+        <span class="header-sub-tag">Blinkit in</span>
+        <h1 class="delivery-title">10 minutes</h1>
+      </div>
+      <div class="header-actions">
+        <div class="wallet-badge" id="headerCartBtn">
+          🛒 <span id="headerCartCount">0</span>
+        </div>
+        <div class="user-avatar-btn">👤</div>
+      </div>
+    </div>
+
+    <div class="address-dropdown-bar">
+      ⚡ <strong>HOME</strong> - 28 raja apartments, Gaur Basti <span class="down-arrow">▼</span>
+    </div>
+
+    <!-- Global Search Input Bar -->
+    <div class="header-search-bar">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="searchInput" placeholder='Search "organic atta", "milk", "chips"...'>
+      <span class="mic-icon">🎙️</span>
+      <button class="clear-search-btn hidden" id="clearSearchBtn">✕</button>
+    </div>
+  </header>
+
+  <!-- 2. Horizontal Navigation Pills -->
+  <nav class="quick-pill-strip" id="topNavPills">
+    <button class="pill-item active" data-nav="home">🏠 Home</button>
+    <button class="pill-item" data-cat="produce">🥦 Veg & Fruits</button>
+    <button class="pill-item" data-cat="dairy">🥛 Dairy & Bread</button>
+    <button class="pill-item" data-cat="snacks">🥔 Snacks & Munchies</button>
+    <button class="pill-item" data-cat="drinks">🧃 Drinks & Juices</button>
+    <button class="pill-item" data-cat="staples">🌾 Atta, Rice & Oil</button>
+    <button class="pill-item" data-cat="personal">💄 Beauty & Care</button>
+    <button class="pill-item" data-cat="cleaning">🧹 House Cleaning</button>
+    <button class="pill-item" data-cat="baby">👶 Baby Care</button>
+    <button class="pill-item" data-cat="electronics">🔌 Electronics</button>
+    <button class="pill-item" data-cat="imported">🌐 Imported Store</button>
+  </nav>
+
+  <!-- ==================== VIEW 1: HOME PAGE VIEW ==================== -->
+  <div id="homeView" class="app-page-view active">
+    
+    <!-- Hero Promotional Banner -->
+    <section class="hero-promo-banner">
+      <div class="banner-content">
+        <span class="banner-tag">CELEBRATE</span>
+        <h2>FRIENDSHIP DAY 🎈</h2>
+        <p>Gifts, Chocolates & Treats Delivered in 10 Mins</p>
+      </div>
+    </section>
+
+    <!-- Category Sections Container -->
+    <div class="category-sections-wrapper">
+      
+      <!-- Grocery & Kitchen Section -->
+      <section class="cat-group-box">
+        <div class="section-title-row">
+          <h3 class="cat-group-title">Grocery & Kitchen</h3>
+          <button class="see-all-link" data-cat="produce">See all ▶</button>
+        </div>
+        <div class="cat-grid-4col">
+          <div class="cat-tile" data-cat="produce">
+            <div class="tile-icon-bg">🥦🍎</div>
+            <span>Vegetables & Fruits</span>
+          </div>
+          <div class="cat-tile" data-cat="staples">
+            <div class="tile-icon-bg">🌾🍞</div>
+            <span>Atta, Rice & Dal</span>
+          </div>
+          <div class="cat-tile" data-cat="staples">
+            <div class="tile-icon-bg">🪔🧂</div>
+            <span>Oil, Ghee & Masala</span>
+          </div>
+          <div class="cat-tile" data-cat="dairy">
+            <div class="tile-icon-bg">🥛🍳</div>
+            <span>Dairy, Bread & Eggs</span>
+          </div>
+          <div class="cat-tile" data-cat="snacks">
+            <div class="tile-icon-bg">🍪🥐</div>
+            <span>Bakery & Biscuits</span>
+          </div>
+          <div class="cat-tile" data-cat="staples">
+            <div class="tile-icon-bg">🥜🥣</div>
+            <span>Dry Fruits & Cereals</span>
+          </div>
+          <div class="cat-tile" data-cat="instant">
+            <div class="tile-icon-bg">🍗🐟</div>
+            <span>Chicken, Meat & Fish</span>
+          </div>
+          <div class="cat-tile" data-cat="cleaning">
+            <div class="tile-icon-bg">🍳🫖</div>
+            <span>Kitchenware & Appliances</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Snacks & Drinks Section -->
+      <section class="cat-group-box">
+        <div class="section-title-row">
+          <h3 class="cat-group-title">Snacks & Drinks</h3>
+          <button class="see-all-link" data-cat="snacks">See all ▶</button>
+        </div>
+        <div class="cat-grid-4col">
+          <div class="cat-tile" data-cat="snacks">
+            <div class="tile-icon-bg">🥔🥨</div>
+            <span>Chips & Namkeen</span>
+          </div>
+          <div class="cat-tile" data-cat="snacks">
+            <div class="tile-icon-bg">🍫🍬</div>
+            <span>Sweets & Chocolates</span>
+          </div>
+          <div class="cat-tile" data-cat="drinks">
+            <div class="tile-icon-bg">🧃🥤</div>
+            <span>Drinks & Juices</span>
+          </div>
+          <div class="cat-tile" data-cat="drinks">
+            <div class="tile-icon-bg">☕🍵</div>
+            <span>Tea, Coffee & Drinks</span>
+          </div>
+          <div class="cat-tile" data-cat="instant">
+            <div class="tile-icon-bg">🍜🥫</div>
+            <span>Instant Food</span>
+          </div>
+          <div class="cat-tile" data-cat="staples">
+            <div class="tile-icon-bg">🍯🍾</div>
+            <span>Sauces & Spreads</span>
+          </div>
+          <div class="cat-tile" data-cat="pharmacy">
+            <div class="tile-icon-bg">🌿🧼</div>
+            <span>Paan Corner</span>
+          </div>
+          <div class="cat-tile" data-cat="snacks">
+            <div class="tile-icon-bg">🍦🍨</div>
+            <span>Ice Creams & More</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Beauty & Personal Care Section -->
+      <section class="cat-group-box">
+        <div class="section-title-row">
+          <h3 class="cat-group-title">Beauty & Personal Care</h3>
+          <button class="see-all-link" data-cat="personal">See all ▶</button>
+        </div>
+        <div class="cat-grid-4col">
+          <div class="cat-tile" data-cat="personal">
+            <div class="tile-icon-bg">🧴🧼</div>
+            <span>Bath & Body</span>
+          </div>
+          <div class="cat-tile" data-cat="personal">
+            <div class="tile-icon-bg">💇‍♀️🧴</div>
+            <span>Hair Care</span>
+          </div>
+          <div class="cat-tile" data-cat="personal">
+            <div class="tile-icon-bg">✨🧴</div>
+            <span>Skin & Face</span>
+          </div>
+          <div class="cat-tile" data-cat="personal">
+            <div class="tile-icon-bg">💄💅</div>
+            <span>Beauty & Cosmetics</span>
+          </div>
+          <div class="cat-tile" data-cat="personal">
+            <div class="tile-icon-bg">🌸🩺</div>
+            <span>Feminine Hygiene</span>
+          </div>
+          <div class="cat-tile" data-cat="baby">
+            <div class="tile-icon-bg">👶🍼</div>
+            <span>Baby Care</span>
+          </div>
+          <div class="cat-tile" data-cat="pharmacy">
+            <div class="tile-icon-bg">💊🩹</div>
+            <span>Health & Pharma</span>
+          </div>
+          <div class="cat-tile" data-cat="personal">
+            <div class="tile-icon-bg">🧼🌿</div>
+            <span>Sexual Wellness</span>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Home Page Trending Reel -->
+    <section class="feed-products-section">
+      <div class="feed-section-header">
+        <h2>Bestsellers in 10 minutes</h2>
+        <span class="total-count-badge">Top Picks</span>
+      </div>
+      <div class="products-grid" id="homeBestsellersGrid"></div>
+    </section>
+
+    <!-- Footer Branding -->
+    <footer class="blinkit-footer-branding">
+      <h2>India’s last minute app ❤️</h2>
+      <div class="footer-logo">blinkit</div>
+    </footer>
+  </div>
+
+  <!-- ==================== VIEW 2: DEDICATED CATEGORY SECTION PAGE ==================== -->
+  <div id="categoryView" class="app-page-view hidden">
+    <div class="category-header-banner">
+      <button class="back-to-home-btn" id="backToHomeBtn">← Back to Home</button>
+      <div class="cat-banner-title-group">
+        <h2 id="categoryPageTitle">Vegetables & Fruits</h2>
+        <span id="categoryPageCountBadge" class="cat-count-sub">120 items available</span>
+      </div>
+    </div>
+
+    <!-- Sorting & Subcategory Filter Bar -->
+    <div class="category-toolbar">
+      <div class="sort-select-box">
+        <label>Sort by:</label>
+        <select id="sortSelect">
+          <option value="popular">Relevance & Popularity</option>
+          <option value="price_low">Price: Low to High</option>
+          <option value="price_high">Price: High to Low</option>
+          <option value="discount">Highest Discount</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Dedicated Category Product Grid -->
+    <div class="category-products-wrapper">
+      <div class="products-grid" id="categoryProductsGrid"></div>
+    </div>
+  </div>
+
+  <!-- ==================== VIEW 3: SEARCH RESULTS PAGE ==================== -->
+  <div id="searchView" class="app-page-view hidden">
+    <div class="search-page-header">
+      <button class="back-to-home-btn" id="searchBackBtn">← Back</button>
+      <h2 id="searchQueryTitle">Search Results</h2>
+    </div>
+    <div class="category-products-wrapper">
+      <div class="products-grid" id="searchProductsGrid"></div>
+    </div>
+  </div>
+
+  <!-- ==================== VIEW 4: PRODUCT DETAIL PAGE (PDP) VIEW ==================== -->
+  <div id="productDetailView" class="app-page-view hidden">
+    <!-- PDP Header Bar -->
+    <div class="pdp-header">
+      <button class="pdp-back-btn" id="pdpBackBtn">←</button>
+      <div class="pdp-header-title-box">
+        <span class="pdp-header-brand" id="pdpHeaderBrand">BRAND</span>
+        <span class="pdp-header-title" id="pdpHeaderTitle">Product Detail Page</span>
+      </div>
+      <div class="pdp-header-actions">
+        <button class="pdp-icon-btn">❤️</button>
+        <button class="pdp-icon-btn" id="pdpSearchBtn">🔍</button>
+        <button class="pdp-icon-btn">🔗</button>
+      </div>
+    </div>
+
+    <!-- Product Detail Container -->
+    <div class="pdp-container" id="pdpContainer">
+      <!-- Populated dynamically by app.js -->
+    </div>
+  </div>
+
+  <!-- Sticky PDP Bottom Bar -->
+  <div class="pdp-sticky-bottom-bar hidden" id="pdpStickyBottomBar">
+    <div class="pdp-bottom-price-col">
+      <span class="pdp-bottom-pack" id="pdpBottomPack">1 unit</span>
+      <div class="pdp-bottom-price-row">
+        <strong id="pdpBottomPrice">₹0</strong>
+        <span class="pdp-bottom-mrp" id="pdpBottomMrp">₹0</span>
+      </div>
+      <span class="pdp-tax-note">(inclusive of all taxes)</span>
+    </div>
+    <div class="pdp-bottom-action-col" id="pdpBottomActionCol">
+      <button class="pdp-add-btn" id="pdpAddBtn">ADD TO CART</button>
+    </div>
+  </div>
+
+  <!-- 3. Bottom Sticky Cart & Navigation Bar -->
+  <div class="mobile-floating-cart-bar hidden" id="mobileFloatingCartBar">
+    <div class="float-left">
+      <div class="float-thumb-previews" id="floatThumbPreviews">🛒</div>
+      <div class="float-text-col">
+        <span class="float-price" id="mobileFloatTotal">₹0</span>
+        <span class="float-qty" id="mobileFloatCount">0 items</span>
+      </div>
+    </div>
+    <button class="float-view-btn" id="mobileViewCartBtn">
+      <span>View cart</span>
+      <span class="arrow">▶</span>
+    </button>
+  </div>
+
+  <!-- 4. Slide-in Cart Sidebar Drawer -->
+  <aside class="cart-sidebar" id="cartSidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-title-group">
+        <h3>My Cart</h3>
+        <span class="cart-item-count" id="drawerItemBadge">0 Items</span>
+      </div>
+      <button class="close-drawer-x" id="closeDrawerBtn">✕</button>
+    </div>
+
+    <!-- Free Delivery Bar -->
+    <div class="delivery-progress-box">
+      <div class="progress-info-row">
+        <span class="truck-icon">🚚</span>
+        <span class="progress-text" id="deliveryProgressText">Add items worth ₹199 for FREE Delivery</span>
+      </div>
+      <div class="progress-bar-track">
+        <div class="progress-bar-fill" id="progressBarFill" style="width: 0%;"></div>
+      </div>
+    </div>
+
+    <!-- Cart Items Scroll List -->
+    <div class="cart-items-scroll-list" id="cartItemsWrapper">
+      <div class="empty-cart-state">
+        <div class="empty-icon">🧺</div>
+        <h4>Your basket is empty</h4>
+        <p>Add items to test AI discovery recommendations on checkout!</p>
+      </div>
+    </div>
+
+    <!-- Bill Details -->
+    <div class="bill-summary-card" id="billCard">
+      <h4>Bill Details</h4>
+      <div class="bill-line">
+        <span>Item Total</span>
+        <span id="billItemTotal">₹0</span>
+      </div>
+      <div class="bill-line">
+        <span>Delivery Charge</span>
+        <span class="green-text" id="billDeliveryFee">FREE</span>
+      </div>
+      <div class="bill-line">
+        <span>Handling Fee</span>
+        <span>₹4</span>
+      </div>
+      <div class="bill-line total-line">
+        <span>Grand Total</span>
+        <span id="billGrandTotal">₹4</span>
+      </div>
+    </div>
+
+    <!-- Place Order Button (Activates AI Suggestion Engine & Pops Up Recommendations) -->
+    <div class="cart-action-bar">
+      <button class="blinkit-proceed-btn" id="proceedCheckoutBtn" disabled>
+        <div class="btn-price-col">
+          <span class="grand-price" id="btnPayAmount">₹0</span>
+          <span class="price-sub">TOTAL</span>
+        </div>
+        <div class="btn-text-col">
+          <span>Place Order</span>
+          <span class="chevron">▶</span>
+        </div>
+      </button>
+    </div>
+  </aside>
+
+  <!-- 5. Authentic Mobile Slide-Up AI Recommendation Sheet -->
+  <div class="blinkit-modal-overlay hidden" id="slotAModalOverlay">
+    <div class="blinkit-bottom-sheet">
+      <div class="sheet-drag-handle"></div>
+      <button class="sheet-close-x" id="dialogCloseBtn">✕</button>
+
+      <div class="sheet-header">
+        <span class="sparkle">✨</span>
+        <div class="sheet-header-text">
+          <span class="sheet-main-title" id="slotABannerTitle">AI Recommended for your Order</span>
+          <span class="sheet-context-tag" id="contextPillTag">⚡ Auto-detected Context</span>
+        </div>
+      </div>
+
+      <div class="multi-recs-grid" id="multiRecsGrid">
+        <!-- 3 Contextual AI Recommendations Populated Dynamically -->
+      </div>
+
+      <div class="sheet-footer">
+        <button class="btn-skip-checkout" id="modalSkipBtn">Skip & Place Order ▶</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

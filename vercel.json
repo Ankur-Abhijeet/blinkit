@@ -1,0 +1,19 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "discovery/web/**",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/static/(.*)",
+      "dest": "/discovery/web/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/discovery/web/index.html"
+    }
+  ]
+}
