@@ -30,9 +30,9 @@ const CATEGORY_NAMES = {
 
 // Self-Collected Time & Weather Context
 try {
-  // Wipe any legacy address strings cached in browser storage
-  localStorage.removeItem("USER_ADDRESS");
-  localStorage.removeItem("BLINKIT_USER_LOCATION");
+  // Wipe all legacy address strings cached in browser storage
+  localStorage.clear();
+  sessionStorage.clear();
 } catch (e) {}
 
 let liveUserLocation = "NextLeap Office, Koramangala, Bangalore";
