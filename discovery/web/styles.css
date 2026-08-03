@@ -1093,7 +1093,11 @@ body {
 
 .pdp-container {
   padding: 12px 16px 120px 16px;
+  width: 100%;
   max-width: 768px;
+  /* Flex items default to min-width:auto, so the carousels below were forcing
+     this to its full 768px on narrow phones and scrolling the whole page. */
+  min-width: 0;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -1255,8 +1259,11 @@ body {
   display: flex;
   gap: 12px;
   overflow-x: auto;
+  /* Scroll the carousel rather than widening its parent. */
+  min-width: 0;
   padding-bottom: 8px;
   scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
 }
 
 .pdp-horizontal-scroll::-webkit-scrollbar {
@@ -1653,19 +1660,24 @@ body {
 /* Desktop Screens (769px and above) */
 @media (min-width: 769px) {
   .blinkit-header {
+    /* margin:0 auto on a column flex item collapses it to content width,
+       so it was rendering ~415px above a 1200px nav strip. */
+    width: 100%;
     max-width: 1200px;
     margin: 0 auto;
     border-radius: 0 0 16px 16px;
   }
 
   .quick-pill-strip {
+    width: 100%;
     max-width: 1200px;
     margin: 0 auto;
   }
 
-  #homeView, #categoryView, #searchView {
+  #homeView, #categoryView, #searchView, #authView, #accountView {
     max-width: 1200px;
     margin: 0 auto;
+    width: 100%;
   }
 
   .hero-promo-banner {
@@ -2250,3 +2262,196 @@ body {
 .account-empty-state .empty-icon { font-size: 30px; margin-bottom: 6px; }
 .account-empty-state h4 { font-size: 13px; color: var(--blinkit-dark); }
 .account-empty-state p { font-size: 11px; margin-top: 4px; }
+
+/* ==========================================
+   RESPONSIVE PASS — screens the earlier rules
+   did not cover (account/auth views, the
+   floating bar, and very small phones)
+   ========================================== */
+
+/* Nothing may push the page sideways. */
+.app-page-view,
+.account-section-box,
+.account-identity-card,
+.auth-card {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.account-order-card,
+.account-order-item-row,
+.account-loc-row {
+  min-width: 0;
+}
+
+/* Long product names in order history wrap instead of stretching the row. */
+.account-order-item-row > span:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.account-loc-row > span:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Desktop: keep the floating bar aligned with the content column instead of
+   stretching across a wide screen. */
+@media (min-width: 769px) {
+  .mobile-floating-cart-bar {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  /* On a product page the content column is 768px — match it. */
+  .mobile-floating-cart-bar.pdp-mode {
+    max-width: 768px;
+  }
+
+  .auth-card {
+    padding: 28px 28px;
+  }
+
+  .account-stats-row {
+    gap: 14px;
+  }
+
+  .account-stat-tile {
+    padding: 18px 10px;
+  }
+}
+
+/* Tablets: the account stats row has room to breathe. */
+@media (min-width: 481px) and (max-width: 768px) {
+  .account-identity-card {
+    gap: 16px;
+  }
+}
+
+/* Phones */
+@media (max-width: 480px) {
+  .auth-page-header,
+  .account-page-header {
+    padding: 12px 14px;
+  }
+
+  .auth-page-header h2,
+  .account-page-header h2 {
+    font-size: 19px;
+  }
+
+  .auth-card {
+    padding: 18px 16px;
+    gap: 12px;
+  }
+
+  .auth-input {
+    padding: 11px 12px;
+    /* 16px keeps iOS Safari from zooming in on focus. */
+    font-size: 16px;
+  }
+
+  .auth-submit-btn {
+    padding: 13px;
+    font-size: 13px;
+  }
+
+  .account-identity-card {
+    padding: 14px;
+    gap: 12px;
+  }
+
+  .account-avatar-circle {
+    width: 46px;
+    height: 46px;
+    font-size: 21px;
+  }
+
+  .account-name-value {
+    font-size: 17px;
+  }
+
+  .account-section-box {
+    padding: 14px;
+  }
+
+  .account-section-title {
+    font-size: 15px;
+  }
+
+  .account-stat-tile strong {
+    font-size: 18px;
+  }
+
+  .account-order-item-row {
+    font-size: 11px;
+  }
+
+  /* Clear the home indicator on notched phones. */
+  .mobile-floating-cart-bar {
+    bottom: max(14px, env(safe-area-inset-bottom));
+    padding: 9px 12px;
+  }
+
+  .float-add-btn {
+    padding: 6px 12px;
+  }
+}
+
+/* Small phones (iPhone SE and narrower) */
+@media (max-width: 360px) {
+  .app-page-view {
+    padding: 12px 14px;
+  }
+
+  /* Three stat tiles no longer fit side by side legibly. */
+  .account-stats-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .account-stat-tile:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .account-identity-card {
+    flex-wrap: wrap;
+  }
+
+  .account-logout-btn {
+    margin-left: auto;
+  }
+
+  .auth-mode-tabs {
+    gap: 4px;
+  }
+
+  .auth-tab-btn {
+    font-size: 11px;
+    padding: 8px 6px;
+  }
+
+  /* Keep the PDP add control and "View cart" on one line. */
+  .mobile-floating-cart-bar {
+    left: 8px;
+    right: 8px;
+    padding: 8px 10px;
+  }
+
+  .float-add-label {
+    font-size: 10px;
+  }
+
+  .float-view-btn {
+    padding: 7px 10px;
+    font-size: 11px;
+  }
+
+  .float-add-stepper {
+    font-size: 10px;
+  }
+
+  .float-add-stepper button {
+    width: 22px;
+    height: 22px;
+  }
+}
