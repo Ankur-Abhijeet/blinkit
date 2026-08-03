@@ -35,7 +35,7 @@ try {
   sessionStorage.clear();
 } catch (e) {}
 
-let liveUserLocation = "Koramangala, Bangalore";
+let liveUserLocation = "Select Location";
 let liveWeatherCondition = "Pleasant & Breezy, 24°C";
 
 function updateHeaderAddressDisplay(locText) {
@@ -906,7 +906,7 @@ if (quickLocChips) {
 }
 
 // Initial Setup
-updateHeaderAddressDisplay("Koramangala, Bangalore");
+updateHeaderAddressDisplay("Select Location");
 openLocationModal();
 loadFullCatalog();
 renderCartSidebar();
