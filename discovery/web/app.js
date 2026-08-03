@@ -4,13 +4,23 @@ let ALL_PRODUCTS = [];
 let state = {
   userId: 101,
   cartMap: {}, // sku_id -> { product, qty }
-  currentView: "home", // "home" | "category" | "search"
+  currentView: "home", // "home" | "category" | "search" | "productDetail" | "auth" | "account"
   activeCategory: "all",
   activeCategoryTitle: "All Items",
   searchQuery: "",
   sortBy: "popular",
   lastDecision: null,
+
+  // Account & session
+  auth: null,             // { token, user: { id, username, created_at } }
+  authMode: "login",      // "login" | "signup" — two distinct actions
+  pendingCheckout: false, // true when auth was triggered by a checkout
+  returnView: "home",     // where to go back to after the auth page
+  locationHistory: [],    // guest-session locations, carried into a new account on signup
+  accountData: null,      // last /v1/account payload
 };
+
+const AUTH_STORAGE_KEY = "blinkit_auth";
 
 const CATEGORY_NAMES = {
   produce: "Vegetables & Fruits",
@@ -30,18 +40,42 @@ const CATEGORY_NAMES = {
 
 // Self-Collected Time & Weather Context
 try {
-  // Wipe all legacy address strings cached in browser storage
+  // Wipe legacy address strings cached in browser storage, but keep the signed-in
+  // session so a page reload does not silently log the user out.
+  const preservedAuth = localStorage.getItem(AUTH_STORAGE_KEY);
   localStorage.clear();
   sessionStorage.clear();
+  if (preservedAuth) localStorage.setItem(AUTH_STORAGE_KEY, preservedAuth);
 } catch (e) {}
 
-let liveUserLocation = "Select Location";
+let liveUserLocation = "NextLeap Office, Koramangala, Bangalore";
 let liveWeatherCondition = "Pleasant & Breezy, 24°C";
 
-function updateHeaderAddressDisplay(locText) {
+function updateHeaderAddressDisplay(locText, source = "session") {
   liveUserLocation = locText;
   const addressText = document.getElementById("headerAddressText");
   if (addressText) addressText.textContent = locText;
+  recordLocationVisit(locText, source);
+}
+
+// Location history: kept locally while browsing as a guest (handed to the backend
+// on signup) and pushed straight to the account once signed in.
+function recordLocationVisit(locText, source = "session") {
+  const location = (locText || "").trim();
+  if (!location) return;
+
+  const last = state.locationHistory[state.locationHistory.length - 1];
+  if (!last || last.location !== location) {
+    state.locationHistory.push({ location, source, recorded_at: new Date().toISOString() });
+  }
+
+  if (state.auth) {
+    fetch(`${API_BASE_URL}/v1/account/location`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({ location, source }),
+    }).catch(err => console.warn("Location history sync failed:", err));
+  }
 }
 
 async function detectUserLocationAndWeather() {
@@ -66,7 +100,7 @@ async function detectUserLocationAndWeather() {
           const geoData = await geoRes.json();
           const locality = geoData.locality || geoData.city || "Current Location";
           const city = geoData.principalSubdivision || geoData.countryName || "";
-          updateHeaderAddressDisplay(`${locality}${city ? ", " + city : ""}`);
+          updateHeaderAddressDisplay(`${locality}${city ? ", " + city : ""}`, "gps");
         }
 
         // Fetch Current Weather via Open-Meteo API
@@ -196,12 +230,20 @@ function showView(viewName, catSlug = null) {
   const searchView = document.getElementById("searchView");
   const productDetailView = document.getElementById("productDetailView");
   const pdpStickyBottomBar = document.getElementById("pdpStickyBottomBar");
+  const authView = document.getElementById("authView");
+  const accountView = document.getElementById("accountView");
+  const pillStrip = document.getElementById("topNavPills");
 
   if (homeView) homeView.classList.add("hidden");
   if (categoryView) categoryView.classList.add("hidden");
   if (searchView) searchView.classList.add("hidden");
   if (productDetailView) productDetailView.classList.add("hidden");
   if (pdpStickyBottomBar) pdpStickyBottomBar.classList.add("hidden");
+  if (authView) authView.classList.add("hidden");
+  if (accountView) accountView.classList.add("hidden");
+
+  // Category pills are storefront navigation — hide them on account screens
+  if (pillStrip) pillStrip.style.display = (viewName === "auth" || viewName === "account") ? "none" : "";
 
   // Highlight pill buttons
   document.querySelectorAll(".pill-item").forEach(p => p.classList.remove("active"));
@@ -223,7 +265,12 @@ function showView(viewName, catSlug = null) {
     if (searchView) searchView.classList.remove("hidden");
   } else if (viewName === "productDetail") {
     if (productDetailView) productDetailView.classList.remove("hidden");
-    if (pdpStickyBottomBar) pdpStickyBottomBar.classList.remove("hidden");
+    // The PDP add control lives in the floating cart bar instead, so this
+    // bar stays hidden — the floating bar sits on top of it either way.
+  } else if (viewName === "auth") {
+    if (authView) authView.classList.remove("hidden");
+  } else if (viewName === "account") {
+    if (accountView) accountView.classList.remove("hidden");
   }
 
   renderCurrentView();
@@ -240,7 +287,13 @@ function renderCurrentView() {
     renderSearchView();
   } else if (state.currentView === "productDetail") {
     renderProductDetailView();
+  } else if (state.currentView === "auth") {
+    renderAuthView();
+  } else if (state.currentView === "account") {
+    renderAccountView();
   }
+
+  renderFloatingPdpAddSlot();
 }
 
 function renderHomeView() {
@@ -545,19 +598,20 @@ function renderCartSidebar() {
   if (mobileFloatCount) mobileFloatCount.textContent = `${totalCount} item${totalCount === 1 ? '' : 's'}`;
   if (mobileFloatTotal) mobileFloatTotal.textContent = `₹${grandTotal}`;
 
-  if (floatThumbPreviews && items.length > 0) {
-    floatThumbPreviews.textContent = items.slice(0, 3).map(i => i.product.emoji || "🛍️").join("");
+  if (floatThumbPreviews) {
+    floatThumbPreviews.textContent = items.length > 0
+      ? items.slice(0, 3).map(i => i.product.emoji || "🛍️").join("")
+      : "🛒";
   }
 
-  if (totalCount > 0) {
-    if (mobileFloatingCartBar) mobileFloatingCartBar.classList.remove("hidden");
-  } else {
-    if (mobileFloatingCartBar) mobileFloatingCartBar.classList.add("hidden");
-    if (cartSidebar) {
-      cartSidebar.classList.remove("open");
-      cartSidebar.classList.remove("mobile-open");
-    }
+  // The bar is always available. With an empty cart it drops the ₹0 / 0 items
+  // readout and offers just "View cart", which opens the empty basket drawer.
+  if (mobileFloatingCartBar) {
+    mobileFloatingCartBar.classList.remove("hidden");
+    mobileFloatingCartBar.classList.toggle("cart-empty-mode", totalCount === 0);
   }
+
+  renderFloatingPdpAddSlot();
 
   // Delivery Progress (₹199 Threshold)
   const freeThreshold = 199;
@@ -599,6 +653,36 @@ function renderCartSidebar() {
     `).join("");
     proceedCheckoutBtn.disabled = false;
   }
+}
+
+// On a product detail page the floating bar carries an ADD control for that
+// item on the left, alongside "View cart" on the right.
+function renderFloatingPdpAddSlot() {
+  const slot = document.getElementById("floatPdpSlot");
+  if (!slot || !mobileFloatingCartBar) return;
+
+  const onPdp = state.currentView === "productDetail";
+  const product = onPdp ? ALL_PRODUCTS.find(p => p.sku_id === state.activeProductSku) : null;
+
+  mobileFloatingCartBar.classList.toggle("pdp-mode", !!product);
+
+  if (!product) {
+    slot.innerHTML = "";
+    return;
+  }
+
+  const qty = state.cartMap[product.sku_id] ? state.cartMap[product.sku_id].qty : 0;
+
+  slot.innerHTML = qty === 0
+    ? `<button class="float-add-btn" onclick="updateQty(${product.sku_id}, 1)">
+         <span class="float-add-label">ADD TO CART</span>
+         <span class="float-add-price">₹${product.price}</span>
+       </button>`
+    : `<div class="float-add-stepper">
+         <button onclick="updateQty(${product.sku_id}, ${qty - 1})">−</button>
+         <span>${qty} in cart</span>
+         <button onclick="updateQty(${product.sku_id}, ${qty + 1})">+</button>
+       </div>`;
 }
 
 // Drawer Controls
@@ -725,9 +809,9 @@ proceedCheckoutBtn.addEventListener("click", async () => {
     return `
       <div class="rec-card-item">
         <div class="rec-img-box">${emoji}</div>
-        <div style="flex:1;">
-          <div class="rec-title">${cand.name}</div>
-          <div class="rec-reason">😏 ${r.headline || "Buying healthy food for your conscience and chips for your soul? We admire the duality of man. 🥔"}</div>
+        <div style="flex:1; min-width:0;">
+          <div class="rec-title" title="${cand.name}">${r.short_name || cand.name}</div>
+          <div class="rec-reason">😏 ${r.headline || "Your cart called. It demanded this. Loudly. 📣"}</div>
         </div>
         <div class="rec-price-row">
           <div>
@@ -769,7 +853,7 @@ function addRecommendedSku(skuId) {
 dialogCloseBtn.addEventListener("click", closeModal);
 modalSkipBtn.addEventListener("click", () => {
   closeModal();
-  alert("Order Placed Successfully! Your 10-Minute Blinkit Delivery has been dispatched. ⏱️");
+  finalizeCheckout();
 });
 
 function closeModal() {
@@ -887,7 +971,7 @@ if (btnDetectGps) {
 if (locationSearchInput) {
   locationSearchInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && locationSearchInput.value.trim()) {
-      updateHeaderAddressDisplay(locationSearchInput.value.trim());
+      updateHeaderAddressDisplay(locationSearchInput.value.trim(), "search");
       closeLocationModal();
     }
   });
@@ -899,14 +983,400 @@ if (quickLocChips) {
     if (btn && btn.dataset.loc) {
       document.querySelectorAll("#quickLocChips .loc-chip-btn").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
-      updateHeaderAddressDisplay(btn.dataset.loc);
+      updateHeaderAddressDisplay(btn.dataset.loc, "picker");
       closeLocationModal();
     }
   });
 }
 
+// ============================================================================
+// 9. ACCOUNTS — Log In / Sign Up (two distinct actions) & My Account page
+// ============================================================================
+
+const authView = document.getElementById("authView");
+const authModeTabs = document.getElementById("authModeTabs");
+const authForm = document.getElementById("authForm");
+const authUsernameInput = document.getElementById("authUsernameInput");
+const authPasswordInput = document.getElementById("authPasswordInput");
+const authSubmitBtn = document.getElementById("authSubmitBtn");
+const authErrorBox = document.getElementById("authErrorBox");
+const authPageHeading = document.getElementById("authPageHeading");
+const authContextNote = document.getElementById("authContextNote");
+const authSwitchPrompt = document.getElementById("authSwitchPrompt");
+const authSwitchLink = document.getElementById("authSwitchLink");
+const authBackBtn = document.getElementById("authBackBtn");
+const headerAccountBtn = document.getElementById("headerAccountBtn");
+const accountBackBtn = document.getElementById("accountBackBtn");
+const accountLogoutBtn = document.getElementById("accountLogoutBtn");
+
+function authHeaders() {
+  const headers = { "Content-Type": "application/json" };
+  if (state.auth && state.auth.token) headers["Authorization"] = `Bearer ${state.auth.token}`;
+  return headers;
+}
+
+function saveAuthSession(auth) {
+  state.auth = auth;
+  try {
+    if (auth) localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(auth));
+    else localStorage.removeItem(AUTH_STORAGE_KEY);
+  } catch (e) {}
+}
+
+function restoreAuthSession() {
+  try {
+    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.token && parsed.user) state.auth = parsed;
+    }
+  } catch (e) {}
+}
+
+function showAuthError(message) {
+  if (!authErrorBox) return;
+  authErrorBox.textContent = message;
+  authErrorBox.classList.remove("hidden");
+}
+
+function clearAuthError() {
+  if (authErrorBox) authErrorBox.classList.add("hidden");
+}
+
+// Opens the Log In / Sign Up page. `mode` picks which of the two actions is active.
+function openAuthPage(mode = "login", opts = {}) {
+  state.authMode = mode;
+  state.pendingCheckout = !!opts.pendingCheckout;
+  if (state.currentView !== "auth") state.returnView = state.currentView;
+  clearAuthError();
+  if (authUsernameInput) authUsernameInput.value = "";
+  if (authPasswordInput) authPasswordInput.value = "";
+  showView("auth");
+}
+
+function renderAuthView() {
+  const isSignup = state.authMode === "signup";
+
+  document.querySelectorAll(".auth-tab-btn").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.authMode === state.authMode);
+  });
+
+  if (authPageHeading) authPageHeading.textContent = isSignup ? "Create your account" : "Log in to your account";
+  if (authSubmitBtn) authSubmitBtn.textContent = isSignup ? "SIGN UP & CONTINUE" : "LOG IN";
+  if (authPasswordInput) authPasswordInput.setAttribute("autocomplete", isSignup ? "new-password" : "current-password");
+
+  if (authContextNote) {
+    if (state.pendingCheckout) {
+      authContextNote.textContent = isSignup
+        ? "Almost there! Create an account to place your order — we'll save this delivery location and your order history to it."
+        : "Almost there! Log in to place your order.";
+    } else {
+      authContextNote.textContent = isSignup
+        ? "Sign up with a user name and password to start tracking your orders."
+        : "Log in with your user name and password to see your account.";
+    }
+  }
+
+  if (authSwitchPrompt) authSwitchPrompt.textContent = isSignup ? "Already have an account?" : "New to Blinkit?";
+  if (authSwitchLink) authSwitchLink.textContent = isSignup ? "Log in instead" : "Create an account";
+}
+
+if (authModeTabs) {
+  authModeTabs.addEventListener("click", (e) => {
+    const btn = e.target.closest("button.auth-tab-btn");
+    if (!btn) return;
+    state.authMode = btn.dataset.authMode;
+    clearAuthError();
+    renderAuthView();
+  });
+}
+
+if (authSwitchLink) {
+  authSwitchLink.addEventListener("click", () => {
+    state.authMode = state.authMode === "signup" ? "login" : "signup";
+    clearAuthError();
+    renderAuthView();
+  });
+}
+
+if (authBackBtn) {
+  authBackBtn.addEventListener("click", () => {
+    state.pendingCheckout = false;
+    showView(state.returnView === "auth" ? "home" : (state.returnView || "home"));
+  });
+}
+
+// Log In and Sign Up hit different endpoints and mean different things:
+// signup creates the account record, login only verifies against it.
+if (authForm) {
+  authForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    clearAuthError();
+
+    const username = (authUsernameInput.value || "").trim();
+    const password = authPasswordInput.value || "";
+    const isSignup = state.authMode === "signup";
+
+    if (!username || !password) {
+      showAuthError("Please enter both a user name and a password.");
+      return;
+    }
+    if (isSignup && username.length < 3) {
+      showAuthError("User name must be at least 3 characters long.");
+      return;
+    }
+    if (isSignup && password.length < 4) {
+      showAuthError("Password must be at least 4 characters long.");
+      return;
+    }
+
+    authSubmitBtn.disabled = true;
+    authSubmitBtn.textContent = isSignup ? "CREATING ACCOUNT..." : "LOGGING IN...";
+
+    try {
+      const endpoint = isSignup ? "/v1/auth/signup" : "/v1/auth/login";
+      const body = isSignup
+        ? {
+            username,
+            password,
+            // Brand-new account record captures the guest session's history
+            location_history: state.locationHistory,
+            purchase_history: [],
+          }
+        : { username, password };
+
+      const res = await fetch(`${API_BASE_URL}${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        const detail = typeof data.detail === "string"
+          ? data.detail
+          : (isSignup ? "Could not create that account. Try a different user name." : "Incorrect username or password");
+        showAuthError(detail);
+        return;
+      }
+
+      saveAuthSession({ token: data.token, user: data.user });
+
+      if (state.pendingCheckout) {
+        state.pendingCheckout = false;
+        await placeOrder();
+      } else {
+        await openAccountPage();
+      }
+    } catch (err) {
+      console.error("Auth request failed:", err);
+      showAuthError("Could not reach the server. Please try again.");
+    } finally {
+      authSubmitBtn.disabled = false;
+      renderAuthView();
+    }
+  });
+}
+
+// ---- Checkout ----------------------------------------------------------
+
+// Final checkout step, reached after the AI recommendation sheet.
+function finalizeCheckout() {
+  if (Object.keys(state.cartMap).length === 0) return;
+
+  if (!state.auth) {
+    // New user: send them to the Log In / Sign Up page before the order lands.
+    openAuthPage("signup", { pendingCheckout: true });
+    return;
+  }
+  placeOrder();
+}
+
+async function placeOrder() {
+  const items = Object.values(state.cartMap);
+  if (items.length === 0) {
+    await openAccountPage();
+    return;
+  }
+
+  const itemTotalRupees = items.reduce((sum, i) => sum + (i.product.price * i.qty), 0);
+  const grandTotal = itemTotalRupees + 4;
+
+  const payload = {
+    items: items.map(i => ({
+      sku_id: i.product.sku_id,
+      name: i.product.name,
+      pack: i.product.pack || "",
+      emoji: i.product.emoji || "🛍️",
+      qty: i.qty,
+      price_paise: i.product.price * 100,
+    })),
+    total_paise: grandTotal * 100,
+    location: liveUserLocation,
+  };
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/v1/orders`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    if (res.status === 401) {
+      saveAuthSession(null);
+      openAuthPage("login", { pendingCheckout: true });
+      showAuthError("Your session expired. Please log in again to place the order.");
+      return;
+    }
+
+    if (!res.ok) {
+      alert("Sorry, we could not place your order. Please try again.");
+      return;
+    }
+
+    const data = await res.json();
+    state.cartMap = {};
+    renderCartSidebar();
+    alert(`Order #${data.order_id} placed successfully! Your 10-Minute Blinkit delivery to ${liveUserLocation} has been dispatched. ⏱️`);
+    await openAccountPage();
+  } catch (err) {
+    console.error("Order placement failed:", err);
+    alert("Could not reach the server to place your order. Please try again.");
+  }
+}
+
+// ---- My Account page ---------------------------------------------------
+
+// The 👤 icon: account page when signed in, Log In / Sign Up page when not.
+async function openAccountPage() {
+  if (!state.auth) {
+    openAuthPage("login");
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/v1/account`, { headers: authHeaders() });
+
+    if (res.status === 401) {
+      saveAuthSession(null);
+      openAuthPage("login");
+      showAuthError("Your session expired. Please log in again.");
+      return;
+    }
+
+    if (!res.ok) throw new Error(`Account fetch failed: ${res.status}`);
+    state.accountData = await res.json();
+    if (state.currentView !== "account") state.returnView = state.currentView;
+    showView("account");
+  } catch (err) {
+    console.error("Could not load account:", err);
+    alert("Could not load your account right now. Please try again.");
+  }
+}
+
+function formatOrderTimestamp(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  return d.toLocaleString([], {
+    day: "2-digit", month: "short", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  });
+}
+
+function renderAccountView() {
+  const data = state.accountData;
+  const ordersList = document.getElementById("accountOrdersList");
+  const locationsList = document.getElementById("accountLocationsList");
+  if (!data || !ordersList || !locationsList) return;
+
+  const username = data.user.username;
+
+  document.getElementById("accountNameValue").textContent = username;
+  document.getElementById("accountAvatarInitial").textContent = username.charAt(0);
+  document.getElementById("accountMetaLine").textContent = `Member since ${formatOrderTimestamp(data.user.created_at)}`;
+
+  const orders = data.orders || [];
+  const locations = data.location_history || [];
+  const totalSpent = orders.reduce((sum, o) => sum + o.total_paise, 0) / 100;
+
+  document.getElementById("accountOrderCount").textContent = orders.length;
+  document.getElementById("accountSpendTotal").textContent = `₹${Math.round(totalSpent)}`;
+  document.getElementById("accountLocationCount").textContent = locations.length;
+
+  if (orders.length === 0) {
+    ordersList.innerHTML = `
+      <div class="account-empty-state">
+        <div class="empty-icon">🧾</div>
+        <h4>No orders yet</h4>
+        <p>Your placed orders will show up here.</p>
+      </div>
+    `;
+  } else {
+    ordersList.innerHTML = orders.map(o => `
+      <div class="account-order-card">
+        <div class="account-order-top-row">
+          <div>
+            <div class="account-order-id">Order #${o.order_id}</div>
+            <div class="account-order-date">${formatOrderTimestamp(o.placed_at)}</div>
+          </div>
+          <div class="account-order-total">₹${Math.round(o.total_paise / 100)}</div>
+        </div>
+        ${o.location ? `<div class="account-order-loc">📍 Delivered to ${o.location}</div>` : ""}
+        <div class="account-order-items">
+          ${o.items.map(i => `
+            <div class="account-order-item-row">
+              <span>${i.emoji || "🛍️"} ${i.name}${i.pack ? ` <span class="qty-tag">(${i.pack})</span>` : ""}</span>
+              <span class="qty-tag">× ${i.qty} · ₹${Math.round(i.price_paise / 100) * i.qty}</span>
+            </div>
+          `).join("")}
+        </div>
+      </div>
+    `).join("");
+  }
+
+  if (locations.length === 0) {
+    locationsList.innerHTML = `
+      <div class="account-empty-state">
+        <div class="empty-icon">📍</div>
+        <h4>No saved locations yet</h4>
+      </div>
+    `;
+  } else {
+    locationsList.innerHTML = locations.map(l => `
+      <div class="account-loc-row">
+        <span>📍 ${l.location}</span>
+        <span class="loc-time">${formatOrderTimestamp(l.recorded_at)}</span>
+      </div>
+    `).join("");
+  }
+}
+
+if (headerAccountBtn) {
+  headerAccountBtn.addEventListener("click", () => {
+    openAccountPage();
+  });
+}
+
+if (accountBackBtn) {
+  accountBackBtn.addEventListener("click", () => showView("home"));
+}
+
+if (accountLogoutBtn) {
+  accountLogoutBtn.addEventListener("click", async () => {
+    try {
+      await fetch(`${API_BASE_URL}/v1/auth/logout`, { method: "POST", headers: authHeaders() });
+    } catch (e) {}
+    saveAuthSession(null);
+    state.accountData = null;
+    showView("home");
+  });
+}
+
 // Initial Setup
-updateHeaderAddressDisplay("Select Location");
+restoreAuthSession();
+updateHeaderAddressDisplay("NextLeap Office, Koramangala, Bangalore", "default");
 openLocationModal();
 loadFullCatalog();
 renderCartSidebar();

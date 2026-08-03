@@ -727,6 +727,64 @@ body {
 .float-left { display: flex; align-items: center; gap: 10px; }
 .float-thumb-previews { font-size: 20px; }
 .float-text-col { display: flex; flex-direction: column; }
+
+/* Empty cart: no ₹0 / 0 items readout — just the cart icon and "View cart". */
+.mobile-floating-cart-bar.cart-empty-mode .float-text-col { display: none; }
+.mobile-floating-cart-bar.cart-empty-mode { background: #3f8f4d; }
+
+/* Product detail page: ADD control on the left, "View cart" on the right. */
+.float-pdp-slot { display: none; }
+
+.mobile-floating-cart-bar.pdp-mode .float-pdp-slot { display: flex; align-items: center; }
+.mobile-floating-cart-bar.pdp-mode .float-left { display: none; }
+.mobile-floating-cart-bar.pdp-mode { gap: 10px; }
+
+.float-add-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.15;
+  background: #ffffff;
+  color: var(--blinkit-green);
+  border: none;
+  padding: 7px 14px;
+  border-radius: var(--radius-sm);
+  font-weight: 900;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.float-add-btn:hover { background: #f0fdf4; }
+.float-add-label { font-size: 11px; letter-spacing: 0.3px; }
+.float-add-price { font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 900; }
+
+.float-add-stepper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #ffffff;
+  border-radius: var(--radius-sm);
+  padding: 4px 6px;
+  color: var(--blinkit-green);
+  font-size: 11px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.float-add-stepper button {
+  background: var(--blinkit-green-soft);
+  border: none;
+  color: var(--blinkit-green);
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: 900;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.float-add-stepper button:hover { background: #d5ecd8; }
 .float-price { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 15px; }
 .float-qty { font-size: 10px; opacity: 0.9; }
 
@@ -866,17 +924,16 @@ body {
   font-size: 30px;
 }
 
+/* Product name is shortened server-side; this is the single-line guarantee. */
 .rec-title {
   font-family: 'Outfit', sans-serif;
   font-weight: 700;
-  font-size: 11px;
+  font-size: 11.5px;
   color: var(--blinkit-dark);
-  line-height: 1.3;
-  height: 28px;
+  line-height: 1.35;
+  white-space: nowrap;
   overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  text-overflow: ellipsis;
 }
 
 .rec-reason {
@@ -1295,6 +1352,9 @@ body {
   align-items: center;
   justify-content: space-between;
 }
+
+/* The bar is PDP-only; showView() toggles .hidden on every other page. */
+.pdp-sticky-bottom-bar.hidden { display: none !important; }
 
 .pdp-bottom-price-col {
   display: flex;
@@ -1827,3 +1887,366 @@ body {
   border-color: var(--blinkit-green);
   color: #15803d;
 }
+
+/* ==================== LOGIN / SIGN UP PAGE VIEW ==================== */
+.auth-page-header,
+.account-page-header {
+  background: #ffffff;
+  border: 1px solid var(--blinkit-border);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.auth-page-header h2,
+.account-page-header h2 {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 900;
+  font-size: 22px;
+}
+
+.auth-card {
+  background: #ffffff;
+  border: 1px solid var(--blinkit-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 420px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.auth-brand-mark {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 900;
+  font-size: 26px;
+  color: var(--blinkit-green);
+  text-align: center;
+  letter-spacing: -0.5px;
+}
+
+.auth-context-note {
+  font-size: 12px;
+  color: var(--blinkit-text-muted);
+  text-align: center;
+  line-height: 1.5;
+}
+
+.auth-mode-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  background: var(--blinkit-gray-bg);
+  border: 1px solid var(--blinkit-border);
+  border-radius: 30px;
+  padding: 4px;
+}
+
+.auth-tab-btn {
+  background: transparent;
+  border: none;
+  border-radius: 30px;
+  padding: 9px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #475569;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.auth-tab-btn.active {
+  background: var(--blinkit-green);
+  color: #ffffff;
+  box-shadow: var(--shadow-sm);
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.auth-field-label {
+  font-size: 11px;
+  font-weight: 800;
+  color: #334155;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-top: 8px;
+}
+
+.auth-input {
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  outline: none;
+  transition: var(--transition);
+}
+
+.auth-input:focus {
+  border-color: var(--blinkit-green);
+  box-shadow: 0 0 0 3px rgba(12, 131, 31, 0.12);
+}
+
+.auth-error-box {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
+  font-size: 11.5px;
+  font-weight: 700;
+  margin-top: 10px;
+}
+
+.auth-error-box.hidden { display: none !important; }
+
+.auth-submit-btn {
+  margin-top: 16px;
+  background: var(--blinkit-green);
+  color: #ffffff;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 14px;
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.auth-submit-btn:hover:not(:disabled) { background: var(--blinkit-green-hover); }
+.auth-submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.auth-switch-row {
+  text-align: center;
+  font-size: 12px;
+  color: var(--blinkit-text-muted);
+  font-weight: 600;
+}
+
+.auth-switch-link {
+  background: none;
+  border: none;
+  color: var(--blinkit-green);
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0 2px;
+}
+
+/* ==================== MY ACCOUNT PAGE VIEW ==================== */
+.account-identity-card {
+  background: #ffffff;
+  border: 1px solid var(--blinkit-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.account-avatar-circle {
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--blinkit-green);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Outfit', sans-serif;
+  font-size: 24px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.account-identity-text { flex: 1; min-width: 0; }
+
+.account-name-label {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--blinkit-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.account-name-value {
+  font-family: 'Outfit', sans-serif;
+  font-size: 20px;
+  font-weight: 900;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.account-meta-line {
+  font-size: 11px;
+  color: var(--blinkit-text-muted);
+  font-weight: 600;
+}
+
+.account-logout-btn {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  border-radius: 20px;
+  padding: 7px 12px;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.account-stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.account-stat-tile {
+  background: #ffffff;
+  border: 1px solid var(--blinkit-border);
+  border-radius: var(--radius-md);
+  padding: 14px 8px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.account-stat-tile strong {
+  font-family: 'Outfit', sans-serif;
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--blinkit-green);
+}
+
+.account-stat-tile span {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--blinkit-text-muted);
+}
+
+.account-section-box {
+  background: #ffffff;
+  border: 1px solid var(--blinkit-border);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.account-section-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.account-order-card {
+  border: 1px solid var(--blinkit-border);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.account-order-card:last-child { margin-bottom: 0; }
+
+.account-order-top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.account-order-id {
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.account-order-date {
+  font-size: 10.5px;
+  color: var(--blinkit-text-muted);
+  font-weight: 600;
+}
+
+.account-order-total {
+  font-family: 'Outfit', sans-serif;
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--blinkit-green);
+  white-space: nowrap;
+}
+
+.account-order-loc {
+  font-size: 10.5px;
+  color: var(--blinkit-text-muted);
+  font-weight: 600;
+}
+
+.account-order-items {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-top: 1px dashed var(--blinkit-border);
+  padding-top: 8px;
+}
+
+.account-order-item-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.account-order-item-row .qty-tag {
+  color: var(--blinkit-text-muted);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.account-loc-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #334155;
+  padding: 8px 0;
+  border-bottom: 1px dashed var(--blinkit-border);
+}
+
+.account-loc-row:last-child { border-bottom: none; }
+
+.account-loc-row .loc-time {
+  font-size: 10px;
+  color: var(--blinkit-text-muted);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.account-empty-state {
+  text-align: center;
+  padding: 24px 10px;
+  color: var(--blinkit-text-muted);
+}
+
+.account-empty-state .empty-icon { font-size: 30px; margin-bottom: 6px; }
+.account-empty-state h4 { font-size: 13px; color: var(--blinkit-dark); }
+.account-empty-state p { font-size: 11px; margin-top: 4px; }

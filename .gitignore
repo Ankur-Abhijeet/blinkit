@@ -39,3 +39,5 @@ htmlcov/
 .env
 .env.local
 archive.zip
+*.db
+blinkit_accounts.db

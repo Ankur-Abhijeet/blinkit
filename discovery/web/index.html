@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=3">
+  <link rel="stylesheet" href="styles.css?v=2">
 </head>
 <body>
 
@@ -22,12 +22,12 @@
         <div class="wallet-badge" id="headerCartBtn">
           🛒 <span id="headerCartCount">0</span>
         </div>
-        <div class="user-avatar-btn">👤</div>
+        <div class="user-avatar-btn" id="headerAccountBtn" title="Account">👤</div>
       </div>
     </div>
 
     <div class="address-dropdown-bar" id="headerAddressBtn" style="cursor: pointer;">
-      ⚡ <strong>DELIVERY IN 8 MINS</strong> - <span id="headerAddressText">Select Location</span> <span class="down-arrow">▼</span>
+      ⚡ <strong>DELIVERY IN 8 MINS</strong> - <span id="headerAddressText">NextLeap Office, Koramangala, Bangalore</span> <span class="down-arrow">▼</span>
     </div>
 
     <!-- Global Search Input Bar -->
@@ -274,6 +274,87 @@
     </div>
   </div>
 
+  <!-- ==================== VIEW 5: LOGIN / SIGN UP PAGE ==================== -->
+  <div id="authView" class="app-page-view hidden">
+    <div class="auth-page-header">
+      <button class="back-to-home-btn" id="authBackBtn">← Back</button>
+      <h2 id="authPageHeading">Log in or Sign up</h2>
+    </div>
+
+    <div class="auth-card">
+      <div class="auth-brand-mark">blinkit</div>
+      <p class="auth-context-note" id="authContextNote">Log in or create an account to continue.</p>
+
+      <!-- Two distinct actions: Log In vs Sign Up -->
+      <div class="auth-mode-tabs" id="authModeTabs">
+        <button class="auth-tab-btn active" data-auth-mode="login">Log In</button>
+        <button class="auth-tab-btn" data-auth-mode="signup">Sign Up</button>
+      </div>
+
+      <form class="auth-form" id="authForm" autocomplete="off">
+        <label class="auth-field-label" for="authUsernameInput">User name</label>
+        <input class="auth-input" type="text" id="authUsernameInput" name="username"
+               placeholder="Enter your user name" autocomplete="username" required>
+
+        <label class="auth-field-label" for="authPasswordInput">Password</label>
+        <input class="auth-input" type="password" id="authPasswordInput" name="password"
+               placeholder="Enter your password" autocomplete="current-password" required>
+
+        <div class="auth-error-box hidden" id="authErrorBox"></div>
+
+        <button type="submit" class="auth-submit-btn" id="authSubmitBtn">LOG IN</button>
+      </form>
+
+      <div class="auth-switch-row">
+        <span id="authSwitchPrompt">New to Blinkit?</span>
+        <button type="button" class="auth-switch-link" id="authSwitchLink">Create an account</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== VIEW 6: MY ACCOUNT PAGE ==================== -->
+  <div id="accountView" class="app-page-view hidden">
+    <div class="account-page-header">
+      <button class="back-to-home-btn" id="accountBackBtn">← Back to Home</button>
+      <h2>My Account</h2>
+    </div>
+
+    <div class="account-identity-card">
+      <div class="account-avatar-circle" id="accountAvatarInitial">B</div>
+      <div class="account-identity-text">
+        <span class="account-name-label">Account name</span>
+        <h3 class="account-name-value" id="accountNameValue">—</h3>
+        <span class="account-meta-line" id="accountMetaLine">Member since —</span>
+      </div>
+      <button class="account-logout-btn" id="accountLogoutBtn">Log out</button>
+    </div>
+
+    <div class="account-stats-row">
+      <div class="account-stat-tile">
+        <strong id="accountOrderCount">0</strong>
+        <span>Orders placed</span>
+      </div>
+      <div class="account-stat-tile">
+        <strong id="accountSpendTotal">₹0</strong>
+        <span>Total spent</span>
+      </div>
+      <div class="account-stat-tile">
+        <strong id="accountLocationCount">0</strong>
+        <span>Delivery locations</span>
+      </div>
+    </div>
+
+    <section class="account-section-box">
+      <h3 class="account-section-title">Order history</h3>
+      <div id="accountOrdersList"></div>
+    </section>
+
+    <section class="account-section-box">
+      <h3 class="account-section-title">Delivery location history</h3>
+      <div id="accountLocationsList"></div>
+    </section>
+  </div>
+
   <!-- Sticky PDP Bottom Bar -->
   <div class="pdp-sticky-bottom-bar hidden" id="pdpStickyBottomBar">
     <div class="pdp-bottom-price-col">
@@ -291,6 +372,8 @@
 
   <!-- 3. Bottom Sticky Cart & Navigation Bar -->
   <div class="mobile-floating-cart-bar hidden" id="mobileFloatingCartBar">
+    <!-- On a product detail page this slot holds an ADD control for that item -->
+    <div class="float-pdp-slot" id="floatPdpSlot"></div>
     <div class="float-left">
       <div class="float-thumb-previews" id="floatThumbPreviews">🛒</div>
       <div class="float-text-col">
@@ -417,12 +500,12 @@
         <div class="quick-locations-section">
           <div class="quick-loc-title">Popular Delivery Hubs</div>
           <div class="quick-loc-chips" id="quickLocChips">
-            <button class="loc-chip-btn active" data-loc="Central Dark Store">📍 Central Dark Store (560001)</button>
-            <button class="loc-chip-btn" data-loc="North Zone Hub">📍 North Zone Hub (560002)</button>
-            <button class="loc-chip-btn" data-loc="East Zone Hub">📍 East Zone Hub (560003)</button>
-            <button class="loc-chip-btn" data-loc="West Zone Hub">📍 West Zone Hub (560004)</button>
-            <button class="loc-chip-btn" data-loc="Metro Plaza Hub">📍 Metro Plaza Hub (110001)</button>
-            <button class="loc-chip-btn" data-loc="Central Bay Hub">📍 Central Bay Hub (400001)</button>
+            <button class="loc-chip-btn active" data-loc="NextLeap Office, Koramangala, Bangalore">📍 NextLeap Office, Bangalore (560034)</button>
+            <button class="loc-chip-btn" data-loc="HSR Layout, Bangalore">📍 HSR Layout, Bangalore (560102)</button>
+            <button class="loc-chip-btn" data-loc="Indiranagar, Bangalore">📍 Indiranagar, Bangalore (560038)</button>
+            <button class="loc-chip-btn" data-loc="Whitefield, Bangalore">📍 Whitefield, Bangalore (560066)</button>
+            <button class="loc-chip-btn" data-loc="Connaught Place, New Delhi">📍 Connaught Place, New Delhi (110001)</button>
+            <button class="loc-chip-btn" data-loc="Powai, Mumbai">📍 Powai, Mumbai (400076)</button>
           </div>
         </div>
       </div>

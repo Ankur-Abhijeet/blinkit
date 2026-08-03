@@ -4,6 +4,7 @@ discovery.api.app — FastAPI Gateway & Web Simulation Interface.
 """
 
 import os
+import re
 from typing import Optional, Dict, Any, List
 from fastapi import FastAPI, Query, Response, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,6 +15,7 @@ from pydantic import BaseModel
 from discovery.worker.nearline_worker import NearlineWorkerEngine
 from discovery.core.types import CartContext, CartItem, Candidate
 from discovery.config.flags import FeatureFlags
+from discovery.api import accounts
 
 
 class CartItemPayload(BaseModel):
@@ -47,6 +49,130 @@ class SlotResponsePayload(BaseModel):
     copy_source: str
 
 
+# ---------------------------------------------------------------------------
+# Joke copy: the punchline shown against each recommended product.
+# House style — 1 to 3 lines, 3 to 20 words, about THAT product.
+# ---------------------------------------------------------------------------
+
+JOKE_MIN_WORDS = 3
+JOKE_MAX_WORDS = 20
+JOKE_MAX_LINES = 3
+# Accepted range is 3-20, but anything this terse is almost always a label
+# ("Tulsi tea for rainstorm calm") rather than a joke — worth one retry.
+JOKE_RETRY_BELOW_WORDS = 7
+
+# Trailing size/qty noise on BigBasket titles, e.g. "... - Vegetarian Capsule 500 mg"
+_PACK_TAIL_RE = re.compile(
+    r"[\s,\-–—]*\b\d+(\.\d+)?\s*(mg|g|gm|gms|kg|ml|l|ltr|litre|liter|pc|pcs|pieces?|wipes?|capsules?|tablets?|sachets?|packs?|units?|n)\b\.?$",
+    re.IGNORECASE,
+)
+
+
+def short_product_label(name: str, max_chars: int = 32) -> str:
+    """A compact, human product label for jokes and single-line card titles."""
+    label = (name or "").strip()
+    if not label:
+        return "this"
+
+    # BigBasket titles put the variant after a dash ("Sponge Pad- Two In One");
+    # the head is the real product. Hyphenated words ("Two-In-One") are untouched.
+    head = re.split(r"\s*[-–—]\s+", label)[0].strip() or label
+    head = _PACK_TAIL_RE.sub("", head).strip(" ,-–—")
+
+    if len(head) <= max_chars:
+        return head or label[:max_chars]
+
+    # Trim on a word boundary rather than mid-word.
+    clipped = head[:max_chars].rsplit(" ", 1)[0].strip(" ,-–—")
+    return (clipped or head[:max_chars]).strip()
+
+
+def clean_joke(text: Optional[str]) -> Optional[str]:
+    """Enforces the house style. Returns None when the line is unusable."""
+    if not text:
+        return None
+
+    lines = [ln.strip() for ln in str(text).strip().splitlines() if ln.strip()]
+    if not lines:
+        return None
+
+    joke = "\n".join(lines[:JOKE_MAX_LINES])
+    words = joke.split()
+
+    if len(words) < JOKE_MIN_WORDS:
+        return None
+
+    if len(words) > JOKE_MAX_WORDS:
+        joke = " ".join(words[:JOKE_MAX_WORDS]).rstrip(" ,;:—-")
+        if not joke.endswith((".", "!", "?", "…")):
+            joke += "."
+
+    return joke
+
+
+# Product-aware backups, used only when Groq cannot deliver a usable joke.
+_JOKE_TEMPLATES = [
+    "{item}? Bold. Your cart just developed a personality. 😏",
+    "Nobody plans for {item}. Everybody ends up with {item}. 🛒",
+    "{item} at {when}. We won't tell anyone. 🤫",
+    "{weather} outside, {item} inside. Balance restored. ⚖️",
+    "Your cart called. It demanded {item}. Loudly. 📣",
+    "{item}: the plot twist this basket deserved. 🎬",
+]
+
+
+def punchy_joke_count(items: List[Dict[str, Any]]) -> int:
+    """How many of the first 3 headlines clear the 'actual joke' bar."""
+    count = 0
+    for r in (items or [])[:3]:
+        joke = clean_joke(r.get("headline"))
+        if joke and len(joke.split()) >= JOKE_RETRY_BELOW_WORDS:
+            count += 1
+    return count
+
+
+def fallback_joke(product_name: str, time_of_day: str, weather: str, idx: int) -> str:
+    """Never ships a bland product description — always lands a punchline."""
+    when = (time_of_day or "this hour").split(" (")[0].strip().lower()
+    weather_word = (weather or "Weather").split(",")[0].strip()
+    joke = _JOKE_TEMPLATES[idx % len(_JOKE_TEMPLATES)].format(
+        item=short_product_label(product_name, max_chars=26),
+        when=when,
+        weather=weather_word,
+    )
+    return clean_joke(joke) or joke
+
+
+JOKE_SYSTEM_PROMPT = (
+    "You are Blinkit's Contextual AI Discovery Engine — a stand-up comedian who moonlights as a grocery recommender. "
+    "Analyse the SPECIFIC SYNERGY of this exact cart combination, the Time of Day and the Weather. "
+    "Pick 3 complementary products from the UNDISCOVERED candidates given to you. "
+    "For EACH product, write ONE joke that obeys ALL of these rules:\n"
+    "1. LENGTH: between 3 and 20 words — hard limits. Aim for 8 to 16: that is enough room "
+    "for a setup AND a punchline.\n"
+    "2. SHAPE: 1 to 3 short lines, and a COMPLETE THOUGHT with a turn in it — not a label.\n"
+    "3. RELEVANT: obviously about THAT specific product and how it collides with their cart, "
+    "the weather, or the hour. A joke that would fit any other product is a failed joke.\n"
+    "4. FUNNY, MEMORABLE, EYE-CATCHING: sharp and a little judgy. Tease their life choices "
+    "affectionately. Land the punchline on the last word.\n"
+    "5. At most one emoji, at the end.\n"
+    "GOOD — copy this energy:\n"
+    "- 'Chips at midnight. Your resolutions died bravely. 🥔'\n"
+    "- 'Rain outside, ice cream inside. Main character energy. 🍦'\n"
+    "- 'Coffee, because pretending to function is a full-time job. ☕'\n"
+    "- 'Face wash, for the garlic you just committed to. ✨'\n"
+    "BAD — never produce these, they are labels pretending to be jokes:\n"
+    "- 'Ham for midnight cravings strong'\n"
+    "- 'Tulsi tea for rainstorm calm'\n"
+    "- 'Hazelnut wafers for Coke pairing'\n"
+    "The bad ones only name the product and a reason. A real joke needs a victim, a turn, "
+    "or a confession. If a line does not make you smirk, rewrite it.\n"
+    "Respond ONLY in valid JSON: "
+    "{\"reason_title\": \"witty banner title, max 8 words\", "
+    "\"items\": [{\"sku_id\": int, \"headline\": \"the joke, 3-20 words\"}]}"
+)
+
+
 def create_app(worker_engine: Optional[NearlineWorkerEngine] = None) -> FastAPI:
     app = FastAPI(title="Blinkit Cart Interrupt MVP", version="1.0.0")
 
@@ -68,6 +194,10 @@ def create_app(worker_engine: Optional[NearlineWorkerEngine] = None) -> FastAPI:
             "discovery.arm_split": {"A": 0, "B": 100, "C": 0},
         })
         worker_engine = NearlineWorkerEngine(flags=flags)
+
+    # Account store: signup/login verification, order history, location history
+    accounts.init_db()
+    app.include_router(accounts.router)
 
     @app.get("/healthz")
     def health_check():
@@ -172,18 +302,6 @@ def create_app(worker_engine: Optional[NearlineWorkerEngine] = None) -> FastAPI:
                     sample_cands = cart_random.sample(undiscovered_cands, k=sample_size)
                     available_desc = "; ".join(f"SKU {c.sku_id}: {c.name} (Cat {c.l1_id}, Rs {c.price_paise//100})" for c in sample_cands)
 
-                    system_prompt = (
-                        "You are Blinkit's Contextual AI Discovery Engine. You are notoriously witty, hilariously sarcastic, playfully judgy, and eye-grabbing. "
-                        "Analyze the SPECIFIC SYNERGY of this exact cart product combination, Time of Day, and Weather. "
-                        "Select 3 top complementary products from UNDISCOVERED categories. "
-                        "For EACH suggested product, write a 1 to 3 line hilariously sarcastic, judgy, or witty observation (15-30 words) commenting on their life choices, cart synergy, weather, or time of day! "
-                        "Tone guidelines: "
-                        "- Be delightfully judgy: 'Buying salad for your conscience and chips for your soul? We admire the duality of man. 🥔' "
-                        "- Be playfully sarcastic: '2 AM noodles detected. Tomorrow morning you will regret this, but tonight you are a king. 👑' "
-                        "- Be eye-grabbing: 'Your couch called—it declared an emergency snack shortage and demands immediate delivery. 🍿' "
-                        "Respond ONLY in valid JSON format: {\"reason_title\": \"Witty banner title\", \"items\": [{\"sku_id\": int, \"headline\": \"hilarious 1-3 line sarcastic/judgy observation\"}]}"
-                    )
-
                     user_prompt = (
                         f"Exact Cart Combination: [{cart_names}]\n"
                         f"Cart SKU Signature ID: {cart_sig_hash}\n"
@@ -193,50 +311,75 @@ def create_app(worker_engine: Optional[NearlineWorkerEngine] = None) -> FastAPI:
                         f"Available Undiscovered Candidates: [{available_desc}]\n"
                     )
 
-                    ok, ai_res = client.generate_completion(
-                        prompt=user_prompt,
-                        system_prompt=system_prompt,
-                        use_groq=True,
-                        temperature=0.8,
-                        max_tokens=600
-                    )
+                    import json
 
-                    funny_fallbacks = [
-                        "Buying healthy food for your conscience and chips for your soul? We admire the duality of man. 🥔",
-                        "2 AM cravings detected. Tomorrow morning you will regret this, but tonight you are a king. 👑",
-                        "Your couch called—it declared an emergency snack shortage and demands immediate delivery. 🍿",
-                        "Sleep is officially a luxury product now. Here is caffeine to pretend you have your life together. ☕",
-                        "Eating ice cream while it's rainy? Either you're in a dramatic movie breakup or you're a legend. 🍦",
-                        "Science proves this pairs 100% better with your cart. Don't fight the algorithm. 🧪",
-                    ]
+                    # Writing the joke is a required step, not a nicety: if the first
+                    # pass comes back short, bland or over-long, push Groq once more
+                    # before falling back to canned copy.
+                    parsed = {}
+                    for attempt in range(2):
+                        nudge = "" if attempt == 0 else (
+                            "\nYour previous attempt produced labels, not jokes. Every headline MUST be "
+                            "8-16 words, a complete thought with a punchline on the last word, clearly "
+                            "about that specific product, and actually funny."
+                        )
+                        ok, ai_res = client.generate_completion(
+                            prompt=user_prompt + nudge,
+                            system_prompt=JOKE_SYSTEM_PROMPT,
+                            use_groq=True,
+                            temperature=0.9 if attempt == 0 else 1.0,
+                            max_tokens=600,
+                        )
+                        if not ok:
+                            print(f"[JOKE ENGINE] Groq call failed (attempt {attempt + 1}): {ai_res}")
+                            continue
 
-                    if ok:
-                        import json
                         raw = ai_res.strip()
                         if raw.startswith("```"):
                             raw = raw.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
-                        parsed = json.loads(raw)
-                        recs = parsed.get("items", [])
 
-                        for idx, r in enumerate(recs[:3]):
-                            sku = r.get("sku_id")
-                            line = r.get("headline")
-                            m_cand = next((c for c in store_pool if c.sku_id == sku), sample_cands[idx % len(sample_cands)])
-                            multi_recommendations.append({
-                                "candidate": m_cand.model_dump(),
-                                "headline": line or funny_fallbacks[idx % len(funny_fallbacks)],
-                            })
+                        try:
+                            candidate_parsed = json.loads(raw)
+                        except json.JSONDecodeError as e:
+                            print(f"[JOKE ENGINE] Unparseable Groq JSON (attempt {attempt + 1}): {e}")
+                            continue
 
-                        if multi_recommendations:
-                            top_cand_dict = multi_recommendations[0]["candidate"]
-                            top_cand = Candidate(**top_cand_dict)
-                            banner_title = parsed.get("reason_title") or "Witty AI Recommendations for your Order"
-                            decision = decision.model_copy(update={
-                                "served_candidate": top_cand,
-                                "reason_line": banner_title,
-                                "copy_source": "groq_llama_3.3_70b_live",
-                                "reason_code": "AI_CONTEXTUAL_MULTI_CATEGORY_MATCH"
-                            })
+                        items = candidate_parsed.get("items", [])
+                        usable = sum(1 for r in items[:3] if clean_joke(r.get("headline")))
+                        punchy = punchy_joke_count(items)
+
+                        # Keep the better of the two attempts, not simply the later one.
+                        if not parsed or punchy >= punchy_joke_count(parsed.get("items", [])):
+                            parsed = candidate_parsed
+
+                        if usable >= 3 and punchy >= 3:
+                            break
+                        tail = "retrying" if attempt == 0 else "keeping best attempt"
+                        print(f"[JOKE ENGINE] {usable}/3 usable, {punchy}/3 punchy (attempt {attempt + 1}); {tail}.")
+
+                    recs = parsed.get("items", [])
+                    for idx, r in enumerate(recs[:3]):
+                        sku = r.get("sku_id")
+                        m_cand = next((c for c in store_pool if c.sku_id == sku), sample_cands[idx % len(sample_cands)])
+                        joke = clean_joke(r.get("headline")) or fallback_joke(
+                            m_cand.name, payload.time_of_day, payload.weather, idx
+                        )
+                        multi_recommendations.append({
+                            "candidate": m_cand.model_dump(),
+                            "short_name": short_product_label(m_cand.name),
+                            "headline": joke,
+                        })
+
+                    if multi_recommendations:
+                        top_cand_dict = multi_recommendations[0]["candidate"]
+                        top_cand = Candidate(**top_cand_dict)
+                        banner_title = parsed.get("reason_title") or "Witty AI Recommendations for your Order"
+                        decision = decision.model_copy(update={
+                            "served_candidate": top_cand,
+                            "reason_line": banner_title,
+                            "copy_source": "groq_llama_3.3_70b_live",
+                            "reason_code": "AI_CONTEXTUAL_MULTI_CATEGORY_MATCH"
+                        })
         except Exception as e:
             print(f"[AI ENGINE EXCEPTION] {e}")
 
@@ -249,7 +392,10 @@ def create_app(worker_engine: Optional[NearlineWorkerEngine] = None) -> FastAPI:
                 if c.sku_id not in seen_skus:
                     multi_recommendations.append({
                         "candidate": c.model_dump(),
-                        "headline": f"Recommended for {payload.time_of_day}",
+                        "short_name": short_product_label(c.name),
+                        "headline": fallback_joke(
+                            c.name, payload.time_of_day, payload.weather, len(multi_recommendations)
+                        ),
                     })
                     seen_skus.add(c.sku_id)
                     if len(multi_recommendations) >= 3:
