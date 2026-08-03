@@ -35,7 +35,7 @@ try {
   sessionStorage.clear();
 } catch (e) {}
 
-let liveUserLocation = "NextLeap Office, Koramangala, Bangalore";
+let liveUserLocation = "Koramangala, Bangalore";
 let liveWeatherCondition = "Pleasant & Breezy, 24°C";
 
 function updateHeaderAddressDisplay(locText) {
@@ -906,7 +906,7 @@ if (quickLocChips) {
 }
 
 // Initial Setup
-updateHeaderAddressDisplay("NextLeap Office, Koramangala, Bangalore");
+updateHeaderAddressDisplay("Koramangala, Bangalore");
 openLocationModal();
 loadFullCatalog();
 renderCartSidebar();
