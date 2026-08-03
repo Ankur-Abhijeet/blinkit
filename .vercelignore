@@ -1,0 +1,14 @@
+# Keep the deployment bundle small. "BigBasket Products.csv" is NOT listed
+# here — catalog_generator reads it at runtime.
+.venv/
+venv/
+__pycache__/
+.pytest_cache/
+tests/
+docs/
+archive.zip
+*.db
+.env
+.DS_Store
+Dockerfile
+render.yaml

@@ -25,3 +25,8 @@ dev = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
+
+# Vercel's Python builder cannot find the ASGI app in a default location
+# (app.py / main.py / api/index.py), so point it at ours explicitly.
+[tool.vercel]
+entrypoint = "discovery.api.app:app"

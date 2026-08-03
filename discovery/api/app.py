@@ -195,8 +195,13 @@ def create_app(worker_engine: Optional[NearlineWorkerEngine] = None) -> FastAPI:
         })
         worker_engine = NearlineWorkerEngine(flags=flags)
 
-    # Account store: signup/login verification, order history, location history
-    accounts.init_db()
+    # Account store: signup/login verification, order history, location history.
+    # A storage failure must not take the storefront down with it — the catalog
+    # and discovery routes work fine without accounts.
+    try:
+        accounts.init_db()
+    except Exception as e:
+        print(f"[ACCOUNTS] Could not initialise {accounts.DB_PATH}: {e}")
     app.include_router(accounts.router)
 
     @app.get("/healthz")

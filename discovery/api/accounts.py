@@ -18,6 +18,7 @@ import hmac
 import os
 import secrets
 import sqlite3
+import tempfile
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
@@ -28,10 +29,25 @@ from pydantic import BaseModel, Field
 # Storage
 # ---------------------------------------------------------------------------
 
-DB_PATH = os.environ.get(
-    "BLINKIT_DB_PATH",
-    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "blinkit_accounts.db")),
-)
+def _resolve_db_path() -> str:
+    """Project root when it is writable, /tmp when it is not.
+
+    Serverless hosts (Vercel, Lambda) mount the deployment read-only and give
+    you only /tmp, so writing to the project directory raises "unable to open
+    database file" on the first request. Set BLINKIT_DB_PATH to override.
+    """
+    override = os.environ.get("BLINKIT_DB_PATH")
+    if override:
+        return override
+
+    project_db = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "blinkit_accounts.db"))
+    if os.access(os.path.dirname(project_db), os.W_OK):
+        return project_db
+
+    return os.path.join(tempfile.gettempdir(), "blinkit_accounts.db")
+
+
+DB_PATH = _resolve_db_path()
 
 PBKDF2_ITERATIONS = 120_000
 
