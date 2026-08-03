@@ -11,6 +11,10 @@ let state = {
   sortBy: "popular",
   lastDecision: null,
 
+  // Live order tracking (active for 10 minutes after checkout)
+  activeOrder: null,      // { order_id, placed_at_ms, total_paise, location, items }
+  trackingTimer: null,
+
   // Account & session
   auth: null,             // { token, user: { id, username, created_at } }
   authMode: "login",      // "login" | "signup" — two distinct actions
@@ -21,6 +25,18 @@ let state = {
 };
 
 const AUTH_STORAGE_KEY = "blinkit_auth";
+const TRACKING_STORAGE_KEY = "blinkit_active_order";
+
+// A placed order stays trackable for 10 minutes.
+const TRACKING_WINDOW_MS = 10 * 60 * 1000;
+
+// Delivery stages, keyed by seconds elapsed since the order was placed.
+const TRACKING_STAGES = [
+  { at: 0,   icon: "🧾", label: "Order confirmed",         sub: "Payment received, sending to the store" },
+  { at: 90,  icon: "📦", label: "Packed at the dark store", sub: "Your items are being bagged" },
+  { at: 240, icon: "🛵", label: "Picked up by your rider",  sub: "On the way to you now" },
+  { at: 450, icon: "📍", label: "Arriving at your door",    sub: "Keep your phone close" },
+];
 
 const CATEGORY_NAMES = {
   produce: "Vegetables & Fruits",
@@ -43,9 +59,11 @@ try {
   // Wipe legacy address strings cached in browser storage, but keep the signed-in
   // session so a page reload does not silently log the user out.
   const preservedAuth = localStorage.getItem(AUTH_STORAGE_KEY);
+  const preservedOrder = localStorage.getItem(TRACKING_STORAGE_KEY);
   localStorage.clear();
   sessionStorage.clear();
   if (preservedAuth) localStorage.setItem(AUTH_STORAGE_KEY, preservedAuth);
+  if (preservedOrder) localStorage.setItem(TRACKING_STORAGE_KEY, preservedOrder);
 } catch (e) {}
 
 let liveUserLocation = "NextLeap Office, Koramangala, Bangalore";
@@ -232,6 +250,7 @@ function showView(viewName, catSlug = null) {
   const pdpStickyBottomBar = document.getElementById("pdpStickyBottomBar");
   const authView = document.getElementById("authView");
   const accountView = document.getElementById("accountView");
+  const trackingView = document.getElementById("trackingView");
   const pillStrip = document.getElementById("topNavPills");
 
   if (homeView) homeView.classList.add("hidden");
@@ -241,9 +260,13 @@ function showView(viewName, catSlug = null) {
   if (pdpStickyBottomBar) pdpStickyBottomBar.classList.add("hidden");
   if (authView) authView.classList.add("hidden");
   if (accountView) accountView.classList.add("hidden");
+  if (trackingView) trackingView.classList.add("hidden");
 
   // Category pills are storefront navigation — hide them on account screens
-  if (pillStrip) pillStrip.style.display = (viewName === "auth" || viewName === "account") ? "none" : "";
+  if (pillStrip) {
+    const chromeless = viewName === "auth" || viewName === "account" || viewName === "tracking";
+    pillStrip.style.display = chromeless ? "none" : "";
+  }
 
   // Highlight pill buttons
   document.querySelectorAll(".pill-item").forEach(p => p.classList.remove("active"));
@@ -271,6 +294,8 @@ function showView(viewName, catSlug = null) {
     if (authView) authView.classList.remove("hidden");
   } else if (viewName === "account") {
     if (accountView) accountView.classList.remove("hidden");
+  } else if (viewName === "tracking") {
+    if (trackingView) trackingView.classList.remove("hidden");
   }
 
   renderCurrentView();
@@ -291,6 +316,8 @@ function renderCurrentView() {
     renderAuthView();
   } else if (state.currentView === "account") {
     renderAccountView();
+  } else if (state.currentView === "tracking") {
+    renderTrackingView();
   }
 
   renderFloatingPdpAddSlot();
@@ -1216,6 +1243,19 @@ async function placeOrder() {
     location: liveUserLocation,
   };
 
+  // Keep the category ids too — the tracking page reuses them to ask the
+  // discovery engine for recommendations that suit what was just ordered.
+  const trackedItems = items.map(i => ({
+    sku_id: i.product.sku_id,
+    l1_id: i.product.l1_id,
+    l2_id: i.product.l2_id,
+    name: i.product.name,
+    pack: i.product.pack || "",
+    emoji: i.product.emoji || "🛍️",
+    qty: i.qty,
+    price_paise: i.product.price * 100,
+  }));
+
   try {
     const res = await fetch(`${API_BASE_URL}/v1/orders`, {
       method: "POST",
@@ -1238,12 +1278,249 @@ async function placeOrder() {
     const data = await res.json();
     state.cartMap = {};
     renderCartSidebar();
-    alert(`Order #${data.order_id} placed successfully! Your 10-Minute Blinkit delivery to ${liveUserLocation} has been dispatched. ⏱️`);
-    await openAccountPage();
+
+    // The tracking page is the confirmation — it replaces the old alert().
+    openTrackingPage({
+      order_id: data.order_id,
+      placed_at_ms: Date.now(),
+      total_paise: payload.total_paise,
+      location: payload.location,
+      items: trackedItems,
+    });
   } catch (err) {
     console.error("Order placement failed:", err);
     alert("Could not reach the server to place your order. Please try again.");
   }
+}
+
+// ---- Live order tracking (10-minute window) ----------------------------
+
+function saveActiveOrder(order) {
+  state.activeOrder = order;
+  try {
+    if (order) localStorage.setItem(TRACKING_STORAGE_KEY, JSON.stringify(order));
+    else localStorage.removeItem(TRACKING_STORAGE_KEY);
+  } catch (e) {}
+}
+
+function restoreActiveOrder() {
+  try {
+    const raw = localStorage.getItem(TRACKING_STORAGE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    // Only resume while the 10-minute window is still open.
+    if (parsed && parsed.placed_at_ms && Date.now() - parsed.placed_at_ms < TRACKING_WINDOW_MS) {
+      state.activeOrder = parsed;
+    } else {
+      localStorage.removeItem(TRACKING_STORAGE_KEY);
+    }
+  } catch (e) {}
+}
+
+function trackingElapsedMs() {
+  if (!state.activeOrder) return 0;
+  return Math.max(0, Date.now() - state.activeOrder.placed_at_ms);
+}
+
+function trackingIsLive() {
+  return !!state.activeOrder && trackingElapsedMs() < TRACKING_WINDOW_MS;
+}
+
+function startTrackingTimer() {
+  stopTrackingTimer();
+  state.trackingTimer = setInterval(() => {
+    if (state.currentView !== "tracking") return;
+    renderTrackingClock();
+    if (!trackingIsLive()) stopTrackingTimer();
+  }, 1000);
+}
+
+function stopTrackingTimer() {
+  if (state.trackingTimer) {
+    clearInterval(state.trackingTimer);
+    state.trackingTimer = null;
+  }
+}
+
+// Opens the tracker for the order that was just placed.
+function openTrackingPage(order) {
+  saveActiveOrder(order);
+  showView("tracking");
+  startTrackingTimer();
+  loadTrackingRecommendations();
+}
+
+// Ticking parts only — cheap enough to run every second.
+function renderTrackingClock() {
+  const order = state.activeOrder;
+  if (!order) return;
+
+  const elapsedMs = trackingElapsedMs();
+  const remainingMs = Math.max(0, TRACKING_WINDOW_MS - elapsedMs);
+  const delivered = remainingMs === 0;
+
+  const label = document.getElementById("trackEtaLabel");
+  const clock = document.getElementById("trackEtaClock");
+  const fill = document.getElementById("trackProgressFill");
+  const badge = document.getElementById("trackRiderBadge");
+  const list = document.getElementById("trackStageList");
+  const recsBox = document.getElementById("trackRecsBox");
+  const recsSub = document.getElementById("trackRecsSub");
+
+  if (label) label.textContent = delivered ? "Delivered" : "Arriving in";
+  if (clock) {
+    const mins = Math.floor(remainingMs / 60000);
+    const secs = Math.floor((remainingMs % 60000) / 1000);
+    clock.textContent = delivered ? "Enjoy! 🎉" : `${mins}:${String(secs).padStart(2, "0")}`;
+  }
+  if (fill) fill.style.width = `${Math.min(100, (elapsedMs / TRACKING_WINDOW_MS) * 100)}%`;
+  if (badge) badge.textContent = delivered ? "✅" : "🛵";
+
+  const elapsedSec = elapsedMs / 1000;
+  const stages = delivered
+    ? TRACKING_STAGES.concat([{ at: 600, icon: "🎉", label: "Delivered", sub: "Your order is at your door" }])
+    : TRACKING_STAGES;
+
+  if (list) {
+    list.innerHTML = stages.map((s, idx) => {
+      const reached = delivered || elapsedSec >= s.at;
+      const next = stages[idx + 1];
+      const isCurrent = reached && (!next || elapsedSec < next.at);
+      const cls = ["track-stage-row", reached ? "done" : "pending", isCurrent ? "current" : ""].join(" ").trim();
+      return `
+        <div class="${cls}">
+          <div class="track-stage-icon">${reached ? s.icon : "○"}</div>
+          <div class="track-stage-text">
+            <span class="track-stage-label">${s.label}</span>
+            <span class="track-stage-sub">${isCurrent ? s.sub : ""}</span>
+          </div>
+          ${reached ? '<span class="track-stage-tick">✓</span>' : ""}
+        </div>
+      `;
+    }).join("");
+  }
+
+  // The recommendation block belongs to the live window only.
+  if (recsBox) recsBox.classList.toggle("hidden", delivered);
+  if (recsSub && !delivered) {
+    const minsLeft = Math.ceil(remainingMs / 60000);
+    recsSub.textContent = `Still ${minsLeft} minute${minsLeft === 1 ? "" : "s"} to fill your cart again`;
+  }
+}
+
+function renderTrackingView() {
+  const order = state.activeOrder;
+  if (!order) {
+    showView("home");
+    return;
+  }
+
+  const orderIdEl = document.getElementById("trackOrderId");
+  const addrEl = document.getElementById("trackOrderAddr");
+  const totalEl = document.getElementById("trackOrderTotal");
+  const itemsEl = document.getElementById("trackOrderItems");
+
+  if (orderIdEl) orderIdEl.textContent = `Order #${order.order_id}`;
+  if (addrEl) addrEl.textContent = `📍 ${order.location || "your address"}`;
+  if (totalEl) totalEl.textContent = `₹${Math.round(order.total_paise / 100)}`;
+
+  if (itemsEl) {
+    itemsEl.innerHTML = (order.items || []).map(i => `
+      <div class="track-item-row">
+        <span class="track-item-name">${i.emoji || "🛍️"} ${i.name}</span>
+        <span class="track-item-qty">× ${i.qty}</span>
+      </div>
+    `).join("");
+  }
+
+  renderTrackingClock();
+}
+
+// Same witty engine as checkout, seeded with what they just ordered.
+async function loadTrackingRecommendations() {
+  const grid = document.getElementById("trackRecsGrid");
+  const title = document.getElementById("trackRecsTitle");
+  const order = state.activeOrder;
+  if (!grid || !order) return;
+
+  grid.innerHTML = `
+    <div style="grid-column: 1 / -1; text-align: center; padding: 24px 10px; color: #16a34a;">
+      <div style="font-size: 30px; margin-bottom: 6px;">✨</div>
+      <h4 style="font-size: 13px; font-weight: 800; color: #0f172a;">Finding something to go with that order…</h4>
+    </div>
+  `;
+
+  const cartItemsPayload = [];
+  (order.items || []).forEach(i => {
+    for (let k = 0; k < i.qty; k++) {
+      cartItemsPayload.push({
+        sku_id: i.sku_id,
+        l1_id: i.l1_id || 0,
+        l2_id: i.l2_id || 0,
+        name: i.name,
+        price_paise: i.price_paise,
+      });
+    }
+  });
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/v1/discovery/simulate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        user_id: state.userId,
+        cart_id: `track_${order.order_id}`,
+        cart_subtotal_paise: order.total_paise,
+        cart_items: cartItemsPayload,
+        store_id: 1,
+        time_of_day: getSystemTimeOfDay(),
+        weather: getSystemWeather(),
+      }),
+    });
+
+    if (!res.ok) throw new Error(`simulate ${res.status}`);
+    const data = await res.json();
+    const recs = data.multi_recommendations || [];
+
+    if (title) title.textContent = data.reason_line || "While you wait…";
+
+    if (recs.length === 0) {
+      grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:16px; color:#64748b;">
+        <h4 style="font-size:13px;">Sit tight — your order is on its way.</h4></div>`;
+      return;
+    }
+
+    grid.innerHTML = recs.map(r => {
+      const c = r.candidate;
+      const price = Math.round(c.price_paise / 100);
+      const mrp = Math.round(c.mrp_paise / 100);
+      return `
+        <div class="rec-card-item">
+          <div class="rec-img-box">${c.emoji || "🛍️"}</div>
+          <div style="flex:1; min-width:0;">
+            <div class="rec-title" title="${c.name}">${r.short_name || c.name}</div>
+            <div class="rec-reason">😏 ${r.headline || "Your cart called. It demanded this. Loudly. 📣"}</div>
+          </div>
+          <div class="rec-price-row">
+            <div>
+              <strong style="font-size:13px;">₹${price}</strong>
+              <span style="font-size:9px; text-decoration:line-through; color:#94a3b8; margin-left:3px;">₹${mrp}</span>
+            </div>
+            <button class="rec-btn-add" onclick="addRecommendedSku(${c.sku_id})">+ ADD</button>
+          </div>
+        </div>
+      `;
+    }).join("");
+  } catch (err) {
+    console.error("Tracking recommendations failed:", err);
+    grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:16px; color:#64748b;">
+      <h4 style="font-size:13px;">Sit tight — your order is on its way.</h4></div>`;
+  }
+}
+
+const trackContinueBtn = document.getElementById("trackContinueBtn");
+if (trackContinueBtn) {
+  trackContinueBtn.addEventListener("click", () => showView("home"));
 }
 
 // ---- My Account page ---------------------------------------------------
@@ -1376,7 +1653,18 @@ if (accountLogoutBtn) {
 
 // Initial Setup
 restoreAuthSession();
+restoreActiveOrder();
 updateHeaderAddressDisplay("NextLeap Office, Koramangala, Bangalore", "default");
-openLocationModal();
+
+// A reload during the 10-minute window drops you back on the tracker
+// rather than the location picker.
+if (trackingIsLive()) {
+  showView("tracking");
+  startTrackingTimer();
+  loadTrackingRecommendations();
+} else {
+  openLocationModal();
+}
+
 loadFullCatalog();
 renderCartSidebar();

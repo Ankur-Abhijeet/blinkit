@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=3">
+  <link rel="stylesheet" href="styles.css?v=6">
 </head>
 <body>
 
@@ -355,6 +355,57 @@
     </section>
   </div>
 
+  <!-- ==================== VIEW 7: LIVE ORDER TRACKING PAGE ==================== -->
+  <!-- Active for 10 minutes after an order is placed -->
+  <div id="trackingView" class="app-page-view hidden">
+
+    <!-- Live tracking box -->
+    <section class="track-box">
+      <div class="track-box-top">
+        <div class="track-eta-col">
+          <span class="track-eta-label" id="trackEtaLabel">Arriving in</span>
+          <span class="track-eta-clock" id="trackEtaClock">10:00</span>
+        </div>
+        <div class="track-rider-badge" id="trackRiderBadge">🛵</div>
+      </div>
+
+      <div class="track-progress-track">
+        <div class="track-progress-fill" id="trackProgressFill" style="width: 0%;"></div>
+      </div>
+
+      <div class="track-stage-list" id="trackStageList">
+        <!-- Stages rendered by app.js -->
+      </div>
+
+      <div class="track-meta-row">
+        <span class="track-meta-order" id="trackOrderId">Order #—</span>
+        <span class="track-meta-addr" id="trackOrderAddr">📍 —</span>
+      </div>
+    </section>
+
+    <!-- Ordered items summary -->
+    <section class="track-items-box">
+      <div class="track-items-head">
+        <h3 class="track-section-title">Your order</h3>
+        <span class="track-items-total" id="trackOrderTotal">₹0</span>
+      </div>
+      <div id="trackOrderItems"></div>
+      <button class="track-continue-btn" id="trackContinueBtn">Continue shopping ▶</button>
+    </section>
+
+    <!-- Recommendations with the witty AI copy, shown while the order is live -->
+    <section class="track-recs-box" id="trackRecsBox">
+      <div class="track-recs-head">
+        <span class="sparkle">✨</span>
+        <div>
+          <span class="track-recs-title" id="trackRecsTitle">While you wait…</span>
+          <span class="track-recs-sub" id="trackRecsSub">Still 10 minutes to fill your cart again</span>
+        </div>
+      </div>
+      <div class="multi-recs-grid" id="trackRecsGrid"></div>
+    </section>
+  </div>
+
   <!-- Sticky PDP Bottom Bar -->
   <div class="pdp-sticky-bottom-bar hidden" id="pdpStickyBottomBar">
     <div class="pdp-bottom-price-col">
@@ -478,7 +529,7 @@
   </div>
 
   <!-- Location Picker Modal Overlay -->
-  <div class="blinkit-modal-overlay" id="locationModalOverlay">
+  <div class="blinkit-modal-overlay hidden" id="locationModalOverlay">
     <div class="location-modal-card">
       <div class="location-modal-header">
         <h3>Change Location</h3>
@@ -512,6 +563,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=2"></script>
+  <script src="app.js?v=4"></script>
 </body>
 </html>

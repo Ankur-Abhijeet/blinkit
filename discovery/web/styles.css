@@ -1674,7 +1674,7 @@ body {
     margin: 0 auto;
   }
 
-  #homeView, #categoryView, #searchView, #authView, #accountView {
+  #homeView, #categoryView, #searchView, #authView, #accountView, #trackingView {
     max-width: 1200px;
     margin: 0 auto;
     width: 100%;
@@ -2454,4 +2454,275 @@ body {
     width: 22px;
     height: 22px;
   }
+}
+
+/* ==========================================
+   LIVE ORDER TRACKING PAGE
+   ========================================== */
+.track-box {
+  background: linear-gradient(160deg, #0c831f 0%, #0a6b19 100%);
+  color: #ffffff;
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  box-shadow: 0 10px 26px rgba(12, 131, 31, 0.28);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.track-box-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.track-eta-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.track-eta-label {
+  font-size: 11px;
+  font-weight: 700;
+  opacity: 0.85;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.track-eta-clock {
+  font-family: 'Outfit', sans-serif;
+  font-size: 34px;
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.track-rider-badge {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  animation: trackPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes trackPulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.35); }
+  50%      { transform: scale(1.06); box-shadow: 0 0 0 10px rgba(255, 255, 255, 0); }
+}
+
+.track-progress-track {
+  height: 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.25);
+  overflow: hidden;
+}
+
+.track-progress-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: #ffffff;
+  transition: width 0.9s linear;
+}
+
+.track-stage-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.track-stage-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.18);
+}
+
+.track-stage-row:last-child { border-bottom: none; }
+.track-stage-row.pending { opacity: 0.5; }
+
+.track-stage-icon {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+}
+
+.track-stage-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.track-stage-label {
+  font-size: 12px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.track-stage-row.current .track-stage-label { font-size: 12.5px; }
+
+.track-stage-sub {
+  font-size: 10px;
+  opacity: 0.85;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.track-stage-tick {
+  font-size: 12px;
+  font-weight: 900;
+  flex-shrink: 0;
+}
+
+.track-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 10.5px;
+  font-weight: 700;
+  opacity: 0.9;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  padding-top: 10px;
+  flex-wrap: wrap;
+}
+
+.track-meta-addr { overflow-wrap: anywhere; }
+
+/* Ordered items summary */
+.track-items-box,
+.track-recs-box {
+  background: #ffffff;
+  border: 1px solid var(--blinkit-border);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.track-recs-box.hidden { display: none !important; }
+
+.track-items-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.track-section-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.track-items-total {
+  font-family: 'Outfit', sans-serif;
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--blinkit-green);
+}
+
+.track-item-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #334155;
+  padding: 5px 0;
+  border-bottom: 1px dashed var(--blinkit-border);
+  min-width: 0;
+}
+
+.track-item-row:last-of-type { border-bottom: none; }
+.track-item-name { min-width: 0; overflow-wrap: anywhere; }
+.track-item-qty { white-space: nowrap; font-weight: 800; color: var(--blinkit-text-muted); }
+
+.track-continue-btn {
+  margin-top: 4px;
+  background: var(--blinkit-gray-bg);
+  border: 1px solid var(--blinkit-border);
+  border-radius: var(--radius-md);
+  padding: 11px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.track-continue-btn:hover {
+  background: var(--blinkit-green-soft);
+  border-color: var(--blinkit-green);
+  color: #15803d;
+}
+
+/* Recommendations shown while the order is live */
+.track-recs-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.track-recs-head > div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.track-recs-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 15px;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+
+.track-recs-sub {
+  font-size: 10.5px;
+  color: var(--blinkit-text-muted);
+  font-weight: 700;
+}
+
+#trackRecsGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+@media (min-width: 769px) {
+  .track-box { padding: 22px 24px; }
+  .track-eta-clock { font-size: 40px; }
+  #trackRecsGrid { grid-template-columns: repeat(3, 1fr); }
+  .track-recs-box .rec-card-item { flex-direction: column; align-items: flex-start; }
+}
+
+@media (max-width: 480px) {
+  .track-box { padding: 15px 16px; }
+  .track-eta-clock { font-size: 30px; }
+  .track-rider-badge { width: 42px; height: 42px; font-size: 21px; }
+  .track-items-box, .track-recs-box { padding: 14px; }
+  .track-section-title, .track-recs-title { font-size: 15px; }
+}
+
+@media (max-width: 360px) {
+  .track-eta-clock { font-size: 26px; }
+  .track-meta-row { font-size: 10px; }
+  .track-stage-label { font-size: 11.5px; }
 }
