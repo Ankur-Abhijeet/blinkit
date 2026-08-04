@@ -377,6 +377,134 @@ function renderSearchView() {
   searchProductsGrid.innerHTML = renderProductCardsHTML(matches);
 }
 
+// ---- Pricing ------------------------------------------------------------
+// 43% of the catalogue carries mrp == price. Those are not discounts, so we
+// show a single price with no struck-through duplicate and no badge.
+
+function discountPercent(price, mrp) {
+  if (!mrp || mrp <= price) return 0;
+  return Math.round(((mrp - price) / mrp) * 100);
+}
+
+// Price block: "₹149 ₹176 15% OFF" when discounted, plain "₹220" when not.
+function priceBlockHTML(price, mrp, opts = {}) {
+  const pct = discountPercent(price, mrp);
+  const cls = opts.compact ? "price-box compact" : "price-box";
+  if (pct === 0) {
+    return `<div class="${cls}"><span class="price-main">₹${price}</span></div>`;
+  }
+  // Two tight lines keep the block narrow so the ADD button stays beside it
+  // and every card in the grid ends up the same height.
+  return `
+    <div class="${cls}">
+      <span class="price-main">₹${price}</span>
+      <span class="price-sub-row">
+        <span class="price-mrp">₹${mrp}</span>
+        <span class="price-off">${pct}% OFF</span>
+      </span>
+    </div>
+  `;
+}
+
+// Corner ribbon for grid cards; empty string when there is nothing to shout about.
+function discountBadgeHTML(price, mrp) {
+  const pct = discountPercent(price, mrp);
+  return pct > 0 ? `<span class="discount-badge">${pct}% OFF</span>` : "";
+}
+
+// One recommendation card, shared by the checkout sheet and the tracking page.
+function recCardHTML(r) {
+  const c = r.candidate;
+  const price = Math.round(c.price_paise / 100);
+  const mrp = Math.round(c.mrp_paise / 100);
+
+  let emoji = c.emoji || "🛍️";
+  if (!c.emoji) {
+    if (c.l1_id === 20) emoji = "👶";
+    else if (c.l1_id === 25) emoji = "🐶";
+    else if (c.l1_id === 18) emoji = "🍫";
+    else if (c.l1_id === 88) emoji = "💊";
+    else if (c.l1_id === 35) emoji = "🧴";
+    else if (c.l1_id === 42) emoji = "🥤";
+  }
+
+  return `
+    <div class="rec-card-item">
+      <div class="rec-img-box">${emoji}</div>
+      <div class="rec-body">
+        <div class="rec-title" title="${c.name}">${r.short_name || c.name}</div>
+        <div class="rec-reason">😏 ${r.headline || "Your cart called. It demanded this. Loudly. 📣"}</div>
+      </div>
+      <div class="rec-price-row">
+        ${priceBlockHTML(price, mrp, { compact: true })}
+        <button class="rec-btn-add" onclick="addRecommendedSku(${c.sku_id})">+ ADD</button>
+      </div>
+    </div>
+  `;
+}
+
+// The Groq round-trip takes a few seconds, so the wait gets skeleton cards,
+// a scanning bar and a rotating status line rather than a frozen panel.
+const REC_LOADING_STEPS = [
+  "Reading your basket…",
+  "Checking the time and the weather…",
+  "Hunting through 3,000 products…",
+  "Writing something rude about your cart…",
+  "Almost there…",
+];
+
+let recLoadingTimer = null;
+
+function showRecLoadingState(grid) {
+  if (!grid) return;
+  stopRecLoadingState();
+
+  grid.innerHTML = `
+    <div class="rec-loading-head">
+      <div class="rec-scanner"><span></span></div>
+      <p class="rec-loading-step" id="recLoadingStep">${REC_LOADING_STEPS[0]}</p>
+    </div>
+    ${recSkeletonHTML(3)}
+  `;
+
+  let i = 0;
+  recLoadingTimer = setInterval(() => {
+    i = (i + 1) % REC_LOADING_STEPS.length;
+    const el = document.getElementById("recLoadingStep");
+    if (!el) return stopRecLoadingState();
+
+    // Plain text swap. The motion in this panel comes from the scanner bar and
+    // the shimmering skeletons; animating the label too left it caught at a
+    // low-opacity keyframe for much of every rotation.
+    el.textContent = REC_LOADING_STEPS[i];
+  }, 1600);
+}
+
+function stopRecLoadingState() {
+  if (recLoadingTimer) {
+    clearInterval(recLoadingTimer);
+    recLoadingTimer = null;
+  }
+}
+
+// Shimmering placeholders shown while the Groq call is in flight.
+function recSkeletonHTML(count = 3) {
+  return Array.from({ length: count }).map(() => `
+    <div class="rec-card-item rec-skeleton" aria-hidden="true">
+      <div class="rec-img-box skel skel-box"></div>
+      <div class="rec-body">
+        <div class="skel skel-line skel-title"></div>
+        <div class="skel skel-line skel-joke"></div>
+        <div class="skel skel-line skel-joke short"></div>
+      </div>
+      <div class="rec-price-row">
+        <div class="skel skel-line skel-price"></div>
+        <div class="skel skel-pill"></div>
+      </div>
+    </div>
+  `).join("");
+}
+
 // Product Cards Generator
 function renderProductCardsHTML(productsList) {
   return productsList.map(p => {
@@ -387,15 +515,13 @@ function renderProductCardsHTML(productsList) {
       <div class="blinkit-card" onclick="openProductDetail(${p.sku_id}, event)">
         <div class="card-top">
           <span class="time-badge">8 MINS</span>
+          ${discountBadgeHTML(p.price, p.mrp)}
         </div>
         <div class="card-img">${p.emoji || "🛍️"}</div>
         <div class="card-title">${p.name}</div>
         <div class="card-pack">${p.pack}</div>
         <div class="card-bottom" onclick="event.stopPropagation()">
-          <div class="price-box">
-            <span class="price-main">₹${p.price}</span>
-            <span class="price-mrp">₹${p.mrp}</span>
-          </div>
+          ${priceBlockHTML(p.price, p.mrp)}
           ${qty === 0 ? `
             <button class="add-btn-blinkit" onclick="updateQty(${p.sku_id}, 1)">ADD</button>
           ` : `
@@ -436,7 +562,13 @@ function renderProductDetailView() {
   const inCart = state.cartMap[p.sku_id];
   const qty = inCart ? inCart.qty : 0;
   const savings = Math.max(0, p.mrp - p.price);
-  const discountPct = Math.round((savings / (p.mrp || p.price)) * 100);
+  const discountPct = discountPercent(p.price, p.mrp);
+
+  // Synthetic multi-packs: only claim a saving when there actually is one.
+  const pack2Price = Math.round(p.price * 1.9);
+  const pack4Price = Math.round(p.price * 3.6);
+  const pack2Save = Math.max(0, Math.round(p.mrp * 2 - pack2Price));
+  const pack4Save = Math.max(0, Math.round(p.mrp * 4 - pack4Price));
 
   const similarProducts = ALL_PRODUCTS.filter(item => item.cat === p.cat && item.sku_id !== p.sku_id).slice(0, 10);
   const topCategoryProducts = ALL_PRODUCTS.filter(item => item.l1_id === p.l1_id && item.sku_id !== p.sku_id).slice(0, 10);
@@ -467,13 +599,13 @@ function renderProductDetailView() {
         </div>
         <div class="pdp-pack-option-btn">
           <span class="pdp-pack-weight">2x Pack</span>
-          <span class="pdp-pack-price">₹${Math.round(p.price * 1.9)}</span>
-          <span class="pdp-pack-save">SAVE ₹${Math.round(p.mrp * 2 - p.price * 1.9)}</span>
+          <span class="pdp-pack-price">₹${pack2Price}</span>
+          ${pack2Save > 0 ? `<span class="pdp-pack-save">SAVE ₹${pack2Save}</span>` : ''}
         </div>
         <div class="pdp-pack-option-btn">
           <span class="pdp-pack-weight">4x Family</span>
-          <span class="pdp-pack-price">₹${Math.round(p.price * 3.6)}</span>
-          <span class="pdp-pack-save">SAVE ₹${Math.round(p.mrp * 4 - p.price * 3.6)}</span>
+          <span class="pdp-pack-price">₹${pack4Price}</span>
+          ${pack4Save > 0 ? `<span class="pdp-pack-save">SAVE ₹${pack4Save}</span>` : ''}
         </div>
       </div>
 
@@ -556,7 +688,10 @@ function renderProductDetailView() {
 
   if (pdpBottomPack) pdpBottomPack.textContent = p.pack;
   if (pdpBottomPrice) pdpBottomPrice.textContent = `₹${p.price}`;
-  if (pdpBottomMrp) pdpBottomMrp.textContent = `₹${p.mrp}`;
+  if (pdpBottomMrp) {
+    pdpBottomMrp.textContent = discountPct > 0 ? `₹${p.mrp}` : "";
+    pdpBottomMrp.style.display = discountPct > 0 ? "" : "none";
+  }
 
   if (pdpBottomActionCol) {
     if (qty === 0) {
@@ -580,7 +715,7 @@ function renderPDPMiniCard(p) {
   const qty = inCart ? inCart.qty : 0;
   return `
     <div class="pdp-mini-card" onclick="openProductDetail(${p.sku_id}, event)">
-      <div class="pdp-mini-img">${p.emoji || "🛍️"}</div>
+      <div class="pdp-mini-img">${p.emoji || "🛍️"}${discountBadgeHTML(p.price, p.mrp)}</div>
       <div class="pdp-mini-title">${p.name}</div>
       <div class="pdp-mini-pack">${p.pack}</div>
       <div class="pdp-mini-bottom" onclick="event.stopPropagation()">
@@ -788,13 +923,7 @@ proceedCheckoutBtn.addEventListener("click", async () => {
   // 1. Show modal immediately with animated loading spinner
   slotABannerTitle.textContent = "AI Smart Recommendations";
   contextPillTag.textContent = `✨ Personalized For Your Order`;
-  multiRecsGrid.innerHTML = `
-    <div style="grid-column: 1 / -1; text-align: center; padding: 30px 10px; color: #16a34a;">
-      <div style="font-size: 36px; margin-bottom: 8px; animation: pulse 1s infinite alternate;">✨</div>
-      <h4 style="font-size: 14px; font-weight: 800; color: #0f172a;">AI Engine Analyzing Basket Synergy...</h4>
-      <p style="font-size: 11px; color: #64748b; margin-top: 4px;">Groq LLM is crafting personalized recommendations based on time, weather & basket context</p>
-    </div>
-  `;
+  showRecLoadingState(multiRecsGrid);
 
   if (cartSidebar) {
     cartSidebar.classList.remove("open");
@@ -804,6 +933,7 @@ proceedCheckoutBtn.addEventListener("click", async () => {
 
   // 2. Await fresh AI nearline simulation
   await triggerNearlineSimulation();
+  stopRecLoadingState();
 
   // 3. Render fresh Groq AI recommendations
   const recs = (state.lastDecision && state.lastDecision.multi_recommendations) || [];
@@ -818,38 +948,7 @@ proceedCheckoutBtn.addEventListener("click", async () => {
     return;
   }
 
-  multiRecsGrid.innerHTML = recs.map(r => {
-    const cand = r.candidate;
-    const priceRupees = (cand.price_paise / 100).toFixed(0);
-    const mrpRupees = (cand.mrp_paise / 100).toFixed(0);
-
-    let emoji = cand.emoji || "🛍️";
-    if (!cand.emoji) {
-      if (cand.l1_id === 20) emoji = "👶";
-      else if (cand.l1_id === 25) emoji = "🐶";
-      else if (cand.l1_id === 18) emoji = "🍫";
-      else if (cand.l1_id === 88) emoji = "💊";
-      else if (cand.l1_id === 35) emoji = "🧴";
-      else if (cand.l1_id === 42) emoji = "🥤";
-    }
-
-    return `
-      <div class="rec-card-item">
-        <div class="rec-img-box">${emoji}</div>
-        <div style="flex:1; min-width:0;">
-          <div class="rec-title" title="${cand.name}">${r.short_name || cand.name}</div>
-          <div class="rec-reason">😏 ${r.headline || "Your cart called. It demanded this. Loudly. 📣"}</div>
-        </div>
-        <div class="rec-price-row">
-          <div>
-            <strong style="font-size:13px;">₹${priceRupees}</strong>
-            <span style="font-size:9px; text-decoration:line-through; color:#94a3b8; margin-left:3px;">₹${mrpRupees}</span>
-          </div>
-          <button class="rec-btn-add" onclick="addRecommendedSku(${cand.sku_id})">+ ADD</button>
-        </div>
-      </div>
-    `;
-  }).join("");
+  multiRecsGrid.innerHTML = recs.map(recCardHTML).join("");
 });
 
 function addRecommendedSku(skuId) {
@@ -1443,12 +1542,7 @@ async function loadTrackingRecommendations() {
   const order = state.activeOrder;
   if (!grid || !order) return;
 
-  grid.innerHTML = `
-    <div style="grid-column: 1 / -1; text-align: center; padding: 24px 10px; color: #16a34a;">
-      <div style="font-size: 30px; margin-bottom: 6px;">✨</div>
-      <h4 style="font-size: 13px; font-weight: 800; color: #0f172a;">Finding something to go with that order…</h4>
-    </div>
-  `;
+  showRecLoadingState(grid);
 
   const cartItemsPayload = [];
   (order.items || []).forEach(i => {
@@ -1481,40 +1575,20 @@ async function loadTrackingRecommendations() {
     if (!res.ok) throw new Error(`simulate ${res.status}`);
     const data = await res.json();
     const recs = data.multi_recommendations || [];
+    stopRecLoadingState();
 
     if (title) title.textContent = data.reason_line || "While you wait…";
 
     if (recs.length === 0) {
-      grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:16px; color:#64748b;">
-        <h4 style="font-size:13px;">Sit tight — your order is on its way.</h4></div>`;
+      grid.innerHTML = `<div class="rec-empty-note"><h4>Sit tight — your order is on its way.</h4></div>`;
       return;
     }
 
-    grid.innerHTML = recs.map(r => {
-      const c = r.candidate;
-      const price = Math.round(c.price_paise / 100);
-      const mrp = Math.round(c.mrp_paise / 100);
-      return `
-        <div class="rec-card-item">
-          <div class="rec-img-box">${c.emoji || "🛍️"}</div>
-          <div style="flex:1; min-width:0;">
-            <div class="rec-title" title="${c.name}">${r.short_name || c.name}</div>
-            <div class="rec-reason">😏 ${r.headline || "Your cart called. It demanded this. Loudly. 📣"}</div>
-          </div>
-          <div class="rec-price-row">
-            <div>
-              <strong style="font-size:13px;">₹${price}</strong>
-              <span style="font-size:9px; text-decoration:line-through; color:#94a3b8; margin-left:3px;">₹${mrp}</span>
-            </div>
-            <button class="rec-btn-add" onclick="addRecommendedSku(${c.sku_id})">+ ADD</button>
-          </div>
-        </div>
-      `;
-    }).join("");
+    grid.innerHTML = recs.map(recCardHTML).join("");
   } catch (err) {
     console.error("Tracking recommendations failed:", err);
-    grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:16px; color:#64748b;">
-      <h4 style="font-size:13px;">Sit tight — your order is on its way.</h4></div>`;
+    stopRecLoadingState();
+    grid.innerHTML = `<div class="rec-empty-note"><h4>Sit tight — your order is on its way.</h4></div>`;
   }
 }
 
