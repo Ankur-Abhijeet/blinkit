@@ -800,19 +800,29 @@ function renderCartSidebar() {
     `;
     proceedCheckoutBtn.disabled = true;
   } else {
-    cartItemsWrapper.innerHTML = items.map(i => `
-      <div class="cart-item-row">
-        <div class="item-info">
-          <span class="title">${i.product.name}</span>
-          <span class="price">₹${i.product.price} × ${i.qty}</span>
+    cartItemsWrapper.innerHTML = items.map(i => {
+      const p = i.product;
+      const pct = discountPercent(p.price, p.mrp);
+      const priceLine = pct > 0
+        ? `<span class="cart-price-now">₹${p.price}</span>
+           <span class="cart-price-mrp">₹${p.mrp}</span>
+           <span class="price-off">${pct}% OFF</span>`
+        : `<span class="cart-price-now">₹${p.price}</span>`;
+
+      return `
+        <div class="cart-item-row">
+          <div class="item-info">
+            <span class="title">${p.name}</span>
+            <span class="price">${priceLine}<span class="cart-qty-x">× ${i.qty}</span></span>
+          </div>
+          <div class="stepper">
+            <button onclick="updateQty(${p.sku_id}, ${i.qty - 1})">-</button>
+            <span>${i.qty}</span>
+            <button onclick="updateQty(${p.sku_id}, ${i.qty + 1})">+</button>
+          </div>
         </div>
-        <div class="stepper">
-          <button onclick="updateQty(${i.product.sku_id}, ${i.qty - 1})">-</button>
-          <span>${i.qty}</span>
-          <button onclick="updateQty(${i.product.sku_id}, ${i.qty + 1})">+</button>
-        </div>
-      </div>
-    `).join("");
+      `;
+    }).join("");
     proceedCheckoutBtn.disabled = false;
   }
 }

@@ -2953,3 +2953,65 @@ body {
   min-width: 0;
   overflow-wrap: anywhere;
 }
+
+/* ==========================================
+   CART DRAWER ROWS
+   .item-info had no styling at all, so as a flex
+   item its min-width:auto refused to shrink and
+   pushed the stepper past the drawer's edge.
+   ========================================== */
+.cart-item-row {
+  gap: 10px;
+}
+
+.item-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.item-info .title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--blinkit-dark);
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.item-info .price {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  font-size: 11px;
+}
+
+.cart-price-now {
+  font-weight: 900;
+  color: var(--blinkit-dark);
+}
+
+.cart-price-mrp {
+  text-decoration: line-through;
+  color: var(--blinkit-text-muted);
+  font-weight: 600;
+  font-size: 10px;
+}
+
+.cart-qty-x {
+  color: var(--blinkit-text-muted);
+  font-weight: 700;
+}
+
+/* The stepper keeps its width no matter how long the product name is. */
+.cart-item-row .stepper {
+  flex-shrink: 0;
+}
+
+@media (max-width: 360px) {
+  .item-info .title { font-size: 11.5px; }
+  .item-info .price { font-size: 10.5px; gap: 4px; }
+  .cart-item-row .stepper button { padding: 4px 6px; }
+}
