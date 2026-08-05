@@ -61,6 +61,11 @@ JOKE_MAX_LINES = 3
 # ("Tulsi tea for rainstorm calm") rather than a joke — worth one retry.
 JOKE_RETRY_BELOW_WORDS = 7
 
+# Emoji (plus any modifiers/ZWJ joiners) sitting at the very end of a line.
+_TRAILING_EMOJI_RE = re.compile(
+    r"(?:[\s‍️]*[\U0001F000-\U0001FAFF←-⇿⌀-➿⬀-⯿])+[\s‍️]*$"
+)
+
 # Trailing size/qty noise on BigBasket titles, e.g. "... - Vegetarian Capsule 500 mg"
 _PACK_TAIL_RE = re.compile(
     r"[\s,\-–—]*\b\d+(\.\d+)?\s*(mg|g|gm|gms|kg|ml|l|ltr|litre|liter|pc|pcs|pieces?|wipes?|capsules?|tablets?|sachets?|packs?|units?|n)\b\.?$",
@@ -97,6 +102,11 @@ def clean_joke(text: Optional[str]) -> Optional[str]:
         return None
 
     joke = "\n".join(lines[:JOKE_MAX_LINES])
+
+    # Each card renders its own lead emoji, so drop any the model tacked on the
+    # end — otherwise the line shows two competing emojis.
+    joke = _TRAILING_EMOJI_RE.sub("", joke).rstrip(" ,;:—-")
+
     words = joke.split()
 
     if len(words) < JOKE_MIN_WORDS:
@@ -111,13 +121,14 @@ def clean_joke(text: Optional[str]) -> Optional[str]:
 
 
 # Product-aware backups, used only when Groq cannot deliver a usable joke.
+# No emoji in the text — each card renders its own distinct lead emoji.
 _JOKE_TEMPLATES = [
-    "{item}? Bold. Your cart just developed a personality. 😏",
-    "Nobody plans for {item}. Everybody ends up with {item}. 🛒",
-    "{item} at {when}. We won't tell anyone. 🤫",
-    "{weather} outside, {item} inside. Balance restored. ⚖️",
-    "Your cart called. It demanded {item}. Loudly. 📣",
-    "{item}: the plot twist this basket deserved. 🎬",
+    "{item}? Bold. Your cart just grew a personality.",
+    "Nobody plans for {item}. Everybody ends up with it.",
+    "{item} at {when}. We won't tell anyone.",
+    "{weather} outside, {item} inside. Balance restored.",
+    "Your cart called. It demanded {item}. Loudly.",
+    "{item}: the plot twist this basket deserved.",
 ]
 
 
@@ -148,19 +159,22 @@ JOKE_SYSTEM_PROMPT = (
     "Analyse the SPECIFIC SYNERGY of this exact cart combination, the Time of Day and the Weather. "
     "Pick 3 complementary products from the UNDISCOVERED candidates given to you. "
     "For EACH product, write ONE joke that obeys ALL of these rules:\n"
-    "1. LENGTH: between 3 and 20 words — hard limits. Aim for 8 to 16: that is enough room "
-    "for a setup AND a punchline.\n"
+    "1. LENGTH: between 3 and 20 words — hard limits. Aim for 6 to 14. Punchy beats padded: "
+    "cut every word the joke can survive without.\n"
     "2. SHAPE: 1 to 3 short lines, and a COMPLETE THOUGHT with a turn in it — not a label.\n"
     "3. RELEVANT: obviously about THAT specific product and how it collides with their cart, "
     "the weather, or the hour. A joke that would fit any other product is a failed joke.\n"
     "4. FUNNY, MEMORABLE, EYE-CATCHING: sharp and a little judgy. Tease their life choices "
-    "affectionately. Land the punchline on the last word.\n"
-    "5. At most one emoji, at the end.\n"
-    "GOOD — copy this energy:\n"
-    "- 'Chips at midnight. Your resolutions died bravely. 🥔'\n"
-    "- 'Rain outside, ice cream inside. Main character energy. 🍦'\n"
-    "- 'Coffee, because pretending to function is a full-time job. ☕'\n"
-    "- 'Face wash, for the garlic you just committed to. ✨'\n"
+    "affectionately. Land the punchline on the last word and stop there.\n"
+    "5. EMOJI: along with the eye-catching message, give ONE emoji that belongs to THAT "
+    "joke — the one that sells its particular punchline. All three emojis must be "
+    "different from one another; never repeat the same generic smirk three times. "
+    "Put it in the \"emoji\" field, not inside the headline.\n"
+    "GOOD — copy this energy (headline + emoji):\n"
+    "- 'Chips at midnight. Your resolutions died bravely.' + 🪦\n"
+    "- 'Rain outside, ice cream inside. Main character energy.' + 🎬\n"
+    "- 'Coffee, because pretending to function is a full-time job.' + ☕\n"
+    "- 'Face wash, for the garlic you just committed to.' + 😶‍🌫️\n"
     "BAD — never produce these, they are labels pretending to be jokes:\n"
     "- 'Ham for midnight cravings strong'\n"
     "- 'Tulsi tea for rainstorm calm'\n"
@@ -169,7 +183,8 @@ JOKE_SYSTEM_PROMPT = (
     "or a confession. If a line does not make you smirk, rewrite it.\n"
     "Respond ONLY in valid JSON: "
     "{\"reason_title\": \"witty banner title, max 8 words\", "
-    "\"items\": [{\"sku_id\": int, \"headline\": \"the joke, 3-20 words\"}]}"
+    "\"items\": [{\"sku_id\": int, \"headline\": \"the joke, 3-20 words, no emoji\", "
+    "\"emoji\": \"one emoji, different for each item\"}]}"
 )
 
 
@@ -373,6 +388,8 @@ def create_app(worker_engine: Optional[NearlineWorkerEngine] = None) -> FastAPI:
                             "candidate": m_cand.model_dump(),
                             "short_name": short_product_label(m_cand.name),
                             "headline": joke,
+                            # Whatever the model picked, verbatim. No substitutes.
+                            "joke_emoji": str(r.get("emoji") or "").strip(),
                         })
 
                     if multi_recommendations:
@@ -401,6 +418,8 @@ def create_app(worker_engine: Optional[NearlineWorkerEngine] = None) -> FastAPI:
                         "headline": fallback_joke(
                             c.name, payload.time_of_day, payload.weather, len(multi_recommendations)
                         ),
+                        # No model output for these rows, so no emoji.
+                        "joke_emoji": "",
                     })
                     seen_skus.add(c.sku_id)
                     if len(multi_recommendations) >= 3:

@@ -433,7 +433,7 @@ function recCardHTML(r) {
       <div class="rec-img-box">${emoji}</div>
       <div class="rec-body">
         <div class="rec-title" title="${c.name}">${r.short_name || c.name}</div>
-        <div class="rec-reason">😏 ${r.headline || "Your cart called. It demanded this. Loudly. 📣"}</div>
+        <div class="rec-reason">${r.joke_emoji ? `<span class="rec-reason-emoji">${r.joke_emoji}</span> ` : ""}${r.headline || "Your cart called. It demanded this. Loudly."}</div>
       </div>
       <div class="rec-price-row">
         ${priceBlockHTML(price, mrp, { compact: true })}

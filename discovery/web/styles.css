@@ -3066,3 +3066,10 @@ body {
 @media (max-width: 360px) {
   .card-bottom .add-btn-blinkit { padding: 6px 8px; font-size: 10px; }
 }
+
+/* Per-joke lead emoji — kept whole and never squeezed by the text beside it. */
+.rec-reason-emoji {
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+}
